@@ -82,7 +82,7 @@ func (g *generator) generateTemplate(i int) error {
 	var err error
 	templateName := g.templates[i]
 
-	g.notifyProgress(i, "starting")
+	g.notifyProgress(i, "generating")
 
 	destinationName := getDestPath(
 		g.templateRoot,
