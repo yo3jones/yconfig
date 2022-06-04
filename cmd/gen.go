@@ -177,7 +177,7 @@ func (m model) View() string {
 		}
 		sb.WriteString(
 			fmt.Sprintf(
-				"%s %s %s %s %s\n",
+				"   %s %s %s %s %s\n",
 				bracketStyle.Render("["),
 				symbolStyle.Copy().
 					Width(10).
