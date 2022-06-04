@@ -1,17 +1,11 @@
 package generate
 
-import (
-	"bytes"
-	"fmt"
-	"path/filepath"
-	"text/template"
-)
-
 type Generator interface {
 	TemplateRoot(templateRoot string) Generator
+	DesinationRoot(destinationRoot string) Generator
 	Include(include []string) Generator
 	Exclude(exclude []string) Generator
-	Progress(progress func(progress *Progress)) Generator
+	OnProgress(onProgress func(progress *Progress)) Generator
 	Generate() error
 }
 
@@ -21,18 +15,26 @@ type TemplateProgress struct {
 }
 
 type Progress struct {
-	TemplatesProgress []TemplateProgress
+	TemplatesProgress []*TemplateProgress
 }
 
 type generator struct {
-	templateRoot string
-	include      []string
-	exclude      []string
-	progress     func(progress *Progress)
+	templateRoot    string
+	destinationRoot string
+	include         []string
+	exclude         []string
+	onProgress      func(progress *Progress)
+	templates       []string
+	progress        *Progress
 }
 
 func (g *generator) TemplateRoot(templateRoot string) Generator {
 	g.templateRoot = templateRoot
+	return g
+}
+
+func (g *generator) DesinationRoot(destinationRoot string) Generator {
+	g.destinationRoot = destinationRoot
 	return g
 }
 
@@ -46,68 +48,95 @@ func (g *generator) Exclude(exclude []string) Generator {
 	return g
 }
 
-func (g *generator) Progress(progress func(progress *Progress)) Generator {
-	g.progress = progress
+func (g *generator) OnProgress(onProgress func(progress *Progress)) Generator {
+	g.onProgress = onProgress
 	return g
 }
 
 func (g *generator) prepare() {
-	if g.progress == nil {
-		g.progress = func(_ *Progress) {}
+	if g.onProgress == nil {
+		g.onProgress = func(_ *Progress) {}
 	}
 }
 
-func (g *generator) Generate() error {
-	g.prepare()
+func (g *generator) initTempalates() {
+	g.templates = glob(g.templateRoot, g.include, g.exclude)
+}
 
-	templates := glob(g.templateRoot, g.include, g.exclude)
-
-	progress := &Progress{[]TemplateProgress{}}
-	for _, template := range templates {
-		progress.TemplatesProgress = append(
-			progress.TemplatesProgress,
-			TemplateProgress{template, "waiting"},
+func (g *generator) initProgress() {
+	g.progress = &Progress{[]*TemplateProgress{}}
+	for _, template := range g.templates {
+		g.progress.TemplatesProgress = append(
+			g.progress.TemplatesProgress,
+			&TemplateProgress{template, "waiting"},
 		)
 	}
+}
 
-	g.progress(progress)
+func (g *generator) notifyProgress(i int, newProgress string) {
+	g.progress.TemplatesProgress[i].Progress = newProgress
+	g.onProgress(g.progress)
+}
+
+func (g *generator) generateTemplate(i int) error {
+	var err error
+	templateName := g.templates[i]
+
+	g.notifyProgress(i, "starting")
+
+	destinationName := getDestPath(
+		g.templateRoot,
+		templateName,
+		g.destinationRoot,
+	)
+	err = prepareDestination(destinationName)
+	if err != nil {
+		g.notifyProgress(i, "error")
+		return err
+	}
+
+	err = generateTemplate(templateName, destinationName)
+	if err != nil {
+		g.notifyProgress(i, "error")
+		return err
+	}
+
+	g.notifyProgress(i, "complete")
+
+	return nil
+}
+
+func (g *generator) generateTemplates() error {
+	var err error
+
+	for i := range g.templates {
+		err = g.generateTemplate(i)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (g *generator) Generate() error {
+	var err error
+
+	g.prepare()
+
+	g.initTempalates()
+	g.initProgress()
+
+	g.onProgress(g.progress)
+
+	err = g.generateTemplates()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func New() Generator {
 	return &generator{}
-}
-
-func generate() {
-	type Foo struct {
-		Bar string
-	}
-
-	foo := Foo{"bar"}
-
-	t, err1 := template.New("config").
-		Parse("something here {{- .Bar }} something after")
-	if err1 != nil {
-		fmt.Println(err1)
-		return
-	}
-
-	writer := bytes.NewBuffer([]byte{})
-
-	t.Execute(writer, foo)
-
-	fmt.Printf("%s\n", writer.Bytes())
-}
-
-func Generate(glob string) {
-	_, err1 := filepath.Glob(glob)
-	if err1 != nil {
-		fmt.Println(err1)
-		return
-	}
-
-	// for _, m := range matches {
-	// 	fmt.Println(m)
-	// }
 }
