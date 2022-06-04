@@ -15,15 +15,16 @@ import (
 const (
 	nameTemplateRoot string = "template-root"
 	pathTempalteRoot string = "generate.templateRoot"
-
-	nameDestRoot string = "destination-root"
-	pathDestRoot string = "generate.destinationRoot"
-
-	nameInclude string = "include"
-	pathInclude string = "generate.include"
-
-	nameExclude string = "exclude"
-	pathExclude string = "generate.exclude"
+	nameDestRoot     string = "destination-root"
+	pathDestRoot     string = "generate.destinationRoot"
+	nameInclude      string = "include"
+	pathInclude      string = "generate.include"
+	nameExclude      string = "exclude"
+	pathExclude      string = "generate.exclude"
+	nameLink         string = "link"
+	pathLink         string = "generate.link"
+	nameDelay        string = "delay"
+	pathDelay        string = "generate.delay"
 )
 
 type model struct {
@@ -45,6 +46,8 @@ var genCmd = &cobra.Command{
 		destinationRoot := viper.GetString(pathDestRoot)
 		include := viper.GetStringSlice(pathInclude)
 		exclude := viper.GetStringSlice(pathExclude)
+		link := viper.GetBool(pathLink)
+		delay := viper.GetInt(pathDelay)
 
 		program := tea.NewProgram(model{})
 
@@ -54,6 +57,8 @@ var genCmd = &cobra.Command{
 				DesinationRoot(destinationRoot).
 				Include(include).
 				Exclude(exclude).
+				Link(link).
+				Delay(delay).
 				OnProgress(func(progress *generate.Progress) {
 					program.Send(ProgressMsg{progress})
 				}).
@@ -73,24 +78,26 @@ var genCmd = &cobra.Command{
 }
 
 func init() {
+	var err error
+
 	genCmd.Flags().
 		String(nameTemplateRoot, ".", "root path for the template files")
-	err1 := viper.BindPFlag(
+	err = viper.BindPFlag(
 		pathTempalteRoot,
 		genCmd.Flags().Lookup(nameTemplateRoot),
 	)
-	if err1 != nil {
-		fmt.Fprintln(os.Stderr, err1)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	genCmd.Flags().
 		String(nameDestRoot, ".", "root path for writing the output of the templates")
-	err2 := viper.BindPFlag(
+	err = viper.BindPFlag(
 		pathDestRoot,
 		genCmd.Flags().Lookup(nameDestRoot),
 	)
-	if err2 != nil {
-		fmt.Fprintln(os.Stderr, err2)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	genCmd.Flags().StringSlice(
@@ -98,9 +105,9 @@ func init() {
 		[]string{},
 		"globs of config file templates to include",
 	)
-	err3 := viper.BindPFlag(pathInclude, genCmd.Flags().Lookup(nameInclude))
-	if err3 != nil {
-		fmt.Fprintln(os.Stderr, err3)
+	err = viper.BindPFlag(pathInclude, genCmd.Flags().Lookup(nameInclude))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	genCmd.Flags().StringSlice(
@@ -108,9 +115,26 @@ func init() {
 		[]string{},
 		"globs of config file templates to exclude",
 	)
-	err4 := viper.BindPFlag(pathExclude, genCmd.Flags().Lookup(nameExclude))
-	if err4 != nil {
-		fmt.Fprintln(os.Stderr, err4)
+	err = viper.BindPFlag(pathExclude, genCmd.Flags().Lookup(nameExclude))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	genCmd.Flags().Bool(
+		nameLink,
+		true,
+		"whether to link the generated config files to the users home dir",
+	)
+	err = viper.BindPFlag(pathLink, genCmd.Flags().Lookup(nameLink))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	genCmd.Flags().
+		Int(nameDelay, 0, "add a delay in mils to see cool animations")
+	err = viper.BindPFlag(pathDelay, genCmd.Flags().Lookup(nameDelay))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	rootCmd.AddCommand(genCmd)
@@ -147,7 +171,7 @@ func (m model) View() string {
 		return "starting"
 	}
 
-	var maxPathWidth int = 0
+	maxPathWidth := 0
 	for _, p := range m.progress.TemplatesProgress {
 		maxPathWidth = maxWidth(maxPathWidth, lipgloss.Width(p.Path))
 	}
@@ -159,17 +183,17 @@ func (m model) View() string {
 	for _, p := range m.progress.TemplatesProgress {
 		var symbol string
 		symbolStyle := lipgloss.NewStyle().Bold(true)
-		switch p.Progress {
-		case "waiting":
+		switch p.Status {
+		case generate.Waiting:
 			symbolStyle.Foreground(lipgloss.Color("13"))
 			symbol = ""
-		case "generating":
+		case generate.Generating, generate.Linking:
 			symbolStyle.Foreground(lipgloss.Color("12"))
 			symbol = "◯"
-		case "complete":
+		case generate.Complete:
 			symbolStyle.Foreground(lipgloss.Color("10"))
 			symbol = "✔"
-		case "error":
+		case generate.Error:
 			symbolStyle.Foreground(lipgloss.Color("9"))
 			symbol = "⚠"
 		default:
@@ -177,12 +201,12 @@ func (m model) View() string {
 		}
 		sb.WriteString(
 			fmt.Sprintf(
-				"   %s %s %s %s %s\n",
+				"   %s %s %s %s   %s\n",
 				bracketStyle.Render("["),
 				symbolStyle.Copy().
 					Width(10).
 					Align(lipgloss.Right).
-					Render(p.Progress),
+					Render(p.Status.String()),
 				bracketStyle.Render("]"),
 				lipgloss.NewStyle().
 					Width(maxPathWidth).

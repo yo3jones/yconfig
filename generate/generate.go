@@ -1,21 +1,55 @@
 package generate
 
+import (
+	"path"
+	"time"
+)
+
 type Generator interface {
 	TemplateRoot(templateRoot string) Generator
 	DesinationRoot(destinationRoot string) Generator
 	Include(include []string) Generator
 	Exclude(exclude []string) Generator
+	Link(link bool) Generator
+	Delay(delay int) Generator
 	OnProgress(onProgress func(progress *Progress)) Generator
 	Generate() error
 }
 
 type TemplateProgress struct {
-	Path     string
-	Progress string
+	Path   string
+	Status ProgressStatus
 }
 
 type Progress struct {
 	TemplatesProgress []*TemplateProgress
+}
+
+type ProgressStatus int
+
+const (
+	Unknown ProgressStatus = iota
+	Waiting
+	Generating
+	Linking
+	Complete
+	Error
+)
+
+func (ps ProgressStatus) String() string {
+	switch ps {
+	case Waiting:
+		return "Waiting"
+	case Generating:
+		return "Generating"
+	case Linking:
+		return "Linking"
+	case Complete:
+		return "Complete"
+	case Error:
+		return "Error"
+	}
+	return "Uknown"
 }
 
 type generator struct {
@@ -23,6 +57,8 @@ type generator struct {
 	destinationRoot string
 	include         []string
 	exclude         []string
+	link            bool
+	delay           int
 	onProgress      func(progress *Progress)
 	templates       []string
 	progress        *Progress
@@ -48,6 +84,16 @@ func (g *generator) Exclude(exclude []string) Generator {
 	return g
 }
 
+func (g *generator) Link(link bool) Generator {
+	g.link = link
+	return g
+}
+
+func (g *generator) Delay(delay int) Generator {
+	g.delay = delay
+	return g
+}
+
 func (g *generator) OnProgress(onProgress func(progress *Progress)) Generator {
 	g.onProgress = onProgress
 	return g
@@ -68,40 +114,49 @@ func (g *generator) initProgress() {
 	for _, template := range g.templates {
 		g.progress.TemplatesProgress = append(
 			g.progress.TemplatesProgress,
-			&TemplateProgress{template, "waiting"},
+			&TemplateProgress{template, Waiting},
 		)
 	}
 }
 
-func (g *generator) notifyProgress(i int, newProgress string) {
-	g.progress.TemplatesProgress[i].Progress = newProgress
+func (g *generator) notifyProgress(i int, newStatus ProgressStatus) {
+	g.progress.TemplatesProgress[i].Status = newStatus
 	g.onProgress(g.progress)
 }
 
+func (g *generator) sleep() {
+	if g.delay <= 0 {
+		return
+	}
+	time.Sleep(time.Duration(g.delay) * time.Millisecond)
+}
+
 func (g *generator) generateTemplate(i int) error {
-	var err error
 	templateName := g.templates[i]
 
-	g.notifyProgress(i, "generating")
+	g.sleep()
 
-	destinationName := getDestPath(
-		g.templateRoot,
-		templateName,
-		g.destinationRoot,
-	)
-	err = prepareDestination(destinationName)
-	if err != nil {
-		g.notifyProgress(i, "error")
+	g.notifyProgress(i, Generating)
+
+	relativeName := getRelativePath(g.templateRoot, templateName)
+	destinationName := path.Join(g.destinationRoot, relativeName)
+
+	if err := generateTemplate(templateName, destinationName); err != nil {
+		g.notifyProgress(i, Error)
 		return err
 	}
 
-	err = generateTemplate(templateName, destinationName)
-	if err != nil {
-		g.notifyProgress(i, "error")
-		return err
+	if g.link {
+		g.sleep()
+		g.notifyProgress(i, Linking)
+		if err := makeLink(relativeName, destinationName); err != nil {
+			return err
+		}
 	}
 
-	g.notifyProgress(i, "complete")
+	g.sleep()
+
+	g.notifyProgress(i, Complete)
 
 	return nil
 }
@@ -138,5 +193,5 @@ func (g *generator) Generate() error {
 }
 
 func New() Generator {
-	return &generator{}
+	return &generator{link: true}
 }

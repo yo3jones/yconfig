@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"strings"
 	"text/template"
 )
 
@@ -13,6 +12,10 @@ type TemplateContext struct {
 }
 
 func generateTemplate(templateName, destinationName string) error {
+	if err := prepareDestination(destinationName); err != nil {
+		return err
+	}
+
 	t, err1 := template.ParseFiles(templateName)
 	if err1 != nil {
 		return err1
@@ -36,22 +39,10 @@ func generateTemplate(templateName, destinationName string) error {
 	return nil
 }
 
-func getRelativePath(root, name string) string {
-	relativePath := strings.TrimPrefix(name, root)
-	relativePath = strings.TrimPrefix(relativePath, "/")
-
-	return relativePath
-}
-
-func getDestPath(templateRoot, template, destinationRoot string) string {
-	relativePath := getRelativePath(templateRoot, template)
-	return path.Join(destinationRoot, relativePath)
-}
-
 func prepareDestination(destinationName string) error {
 	var err error
 
-	err = os.MkdirAll(path.Dir(destinationName), 0755)
+	err = makeDirAll(path.Dir(destinationName))
 	if err != nil {
 		return err
 	}
