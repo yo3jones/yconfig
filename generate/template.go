@@ -2,7 +2,6 @@ package generate
 
 import (
 	"os"
-	"path"
 	"runtime"
 	"text/template"
 )
@@ -42,7 +41,7 @@ func generateTemplate(templateName, destinationName string) error {
 func prepareDestination(destinationName string) error {
 	var err error
 
-	err = makeDirAll(path.Dir(destinationName))
+	err = makeDirAll(destinationName)
 	if err != nil {
 		return err
 	}
