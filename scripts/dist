@@ -1,0 +1,30 @@
+#!/bin/bash
+
+version=$1
+
+echo ""
+echo "building for version $version"
+echo ""
+
+rm -rf dist
+mkdir dist
+
+function do_build() {
+  local os=$1
+  local arch=$2
+
+  env GOOS=$os GOARCH=$arch go build -o dist/yconfig-$version-$os-$arch
+}
+
+function do_pi_build() {
+  local os=$1
+  local arch=$2
+
+  env GOOS=$os GOARCH=$arch GOARM=5 go build -o dist/yconfig-$version-$os-$arch
+}
+
+do_pi_build "linux" "arm"
+do_build "linux" "arm64"
+do_build "linux" "amd64"
+do_build "darwin" "arm64"
+do_build "darwin" "amd64"
