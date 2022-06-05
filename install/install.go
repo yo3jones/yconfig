@@ -5,6 +5,7 @@ import (
 )
 
 type Installer interface {
+	Groups(groups []string) Installer
 	Install() error
 }
 
@@ -13,21 +14,24 @@ type installer struct {
 	inst   *Install
 	os     OsType
 	arch   ArchType
+	groups []string
 }
 
-func (ir *installer) Install() error {
-	var (
-		inst *Install
-		err  error
-	)
+func (instr *installer) Groups(groups []string) Installer {
+	instr.groups = groups
+	return instr
+}
 
-	if inst, err = Parse(ir.config); err != nil {
+func (instr *installer) Install() error {
+	var err error
+
+	if err = instr.parse(); err != nil {
 		return err
 	}
 
-	ir.inst = inst
-
-	Print(inst)
+	if err = instr.execGroups(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -53,4 +57,72 @@ func New(config any) (Installer, error) {
 	}
 
 	return instr, nil
+}
+
+func (instr *installer) parse() error {
+	var (
+		inst *Install
+		err  error
+	)
+
+	if inst, err = Parse(instr.config); err != nil {
+		return err
+	}
+
+	instr.inst = inst
+
+	return nil
+}
+
+func (instr *installer) shouldExec(hasEnv HasEnv) bool {
+	if !instr.os.ShouldExec(hasEnv.GetOs()) {
+		return false
+	}
+	if !instr.arch.ShouldExec(hasEnv.GetArch()) {
+		return false
+	}
+	return true
+}
+
+func (instr *installer) execGroups() error {
+	for _, groupName := range instr.groups {
+		var (
+			group *Group
+			err   error
+		)
+
+		if group, err = instr.inst.GetGroupByName(groupName); err != nil {
+			return err
+		}
+
+		if err = instr.execGroup(group); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (instr *installer) execGroup(group *Group) error {
+	if !instr.shouldExec(group) {
+		return nil
+	}
+
+	for _, command := range group.Commands {
+		var err error
+
+		if err = instr.execCommand(&command); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (instr *installer) execCommand(command *Command) error {
+	if !instr.shouldExec(command) {
+		return nil
+	}
+
+	command.Print()
+	return nil
 }

@@ -7,10 +7,11 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install",
+	Use:   "install [GROUPS]",
 	Short: "run configured install scripts",
 	Long:  "run configured install scripts",
-	Run: func(_ *cobra.Command, _ []string) {
+	Args:  cobra.ArbitraryArgs,
+	Run: func(_ *cobra.Command, args []string) {
 		var err error
 
 		config := viper.Get("install")
@@ -20,7 +21,9 @@ var installCmd = &cobra.Command{
 			panic(err)
 		}
 
-		err = installer.Install()
+		err = installer.
+			Groups(args).
+			Install()
 		if err != nil {
 			panic(err)
 		}

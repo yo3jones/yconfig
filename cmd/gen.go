@@ -38,7 +38,7 @@ type ProgressMsg struct {
 type doneMsg string
 
 var genCmd = &cobra.Command{
-	Use:   "generate",
+	Use:   "generate [OPTIONS]",
 	Short: "generate config files from templates",
 	Long:  "generate config files from templates",
 	Run: func(_ *cobra.Command, _ []string) {
@@ -90,8 +90,11 @@ func init() {
 		fmt.Fprintln(os.Stderr, err)
 	}
 
-	genCmd.Flags().
-		String(nameDestRoot, ".", "root path for writing the output of the templates")
+	genCmd.Flags().String(
+		nameDestRoot,
+		".",
+		"root path for writing the output of the templates",
+	)
 	err = viper.BindPFlag(
 		pathDestRoot,
 		genCmd.Flags().Lookup(nameDestRoot),

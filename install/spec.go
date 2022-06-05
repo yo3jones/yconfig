@@ -23,6 +23,27 @@ type Command struct {
 	Arch    ArchType
 }
 
+type HasEnv interface {
+	GetOs() OsType
+	GetArch() ArchType
+}
+
+func (group *Group) GetOs() OsType {
+	return group.Os
+}
+
+func (group *Group) GetArch() ArchType {
+	return group.Arch
+}
+
+func (command *Command) GetOs() OsType {
+	return command.Os
+}
+
+func (command *Command) GetArch() ArchType {
+	return command.Arch
+}
+
 type OsType int
 
 const (
@@ -130,6 +151,13 @@ func OsTypeFromString(str string) (OsType, error) {
 
 func (osType OsType) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, osType)), nil
+}
+
+func (osType OsType) ShouldExec(otherOsType OsType) bool {
+	if otherOsType == OsAny {
+		return true
+	}
+	return osType == otherOsType
 }
 
 type ArchType int
@@ -276,8 +304,40 @@ func (archType ArchType) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, archType)), nil
 }
 
-func Print(install *Install) {
-	jsonBytes, err := json.MarshalIndent(install, "", "  ")
+func (archType ArchType) ShouldExec(otherArchType ArchType) bool {
+	if otherArchType == ArchAny {
+		return true
+	}
+	return archType == otherArchType
+}
+
+func (inst *Install) GetGroupByName(name string) (*Group, error) {
+	for _, group := range inst.Groups {
+		if group.Name == name {
+			return &group, nil
+		}
+	}
+	return nil, fmt.Errorf("no group found with name %s", name)
+}
+
+func (inst *Install) Print() {
+	jsonBytes, err := json.MarshalIndent(inst, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s\n", jsonBytes)
+}
+
+func (group *Group) Print() {
+	jsonBytes, err := json.MarshalIndent(group, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%s\n", jsonBytes)
+}
+
+func (command *Command) Print() {
+	jsonBytes, err := json.MarshalIndent(command, "", "  ")
 	if err != nil {
 		panic(err)
 	}
