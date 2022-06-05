@@ -83,8 +83,8 @@ func parseGroup(config map[string]any) (*Group, error) {
 
 	group := &Group{
 		Name:     name,
-		Os:       os,
-		Arch:     arch,
+		Os:       OsTypeFromString(os),
+		Arch:     ArchTypeFromString(arch),
 		Commands: commands,
 	}
 
@@ -119,13 +119,13 @@ func parseCommand(config any) (*Command, error) {
 
 func parseCommandMap(config map[string]any) (*Command, error) {
 	var (
-		command string
-		os      string
-		arch    string
-		err     error
+		commandString string
+		os            string
+		arch          string
+		err           error
 	)
 
-	if command, err = getString("command", config); err != nil {
+	if commandString, err = getString("command", config); err != nil {
 		return nil, err
 	}
 	if os, err = getStringDefault("os", config, "any"); err != nil {
@@ -135,11 +135,23 @@ func parseCommandMap(config map[string]any) (*Command, error) {
 		return nil, err
 	}
 
-	return &Command{Command: command, Os: os, Arch: arch}, nil
+	command := &Command{
+		Command: commandString,
+		Os:      OsTypeFromString(os),
+		Arch:    ArchTypeFromString(arch),
+	}
+
+	return command, nil
 }
 
 func parseCommandString(config string) (*Command, error) {
-	return &Command{Command: config, Os: "any", Arch: "any"}, nil
+	command := &Command{
+		Command: config,
+		Os:      OsAny,
+		Arch:    ArchAny,
+	}
+
+	return command, nil
 }
 
 func parseEither[T any, E any, C any](
