@@ -1,108 +1,157 @@
 package install
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
-func Parse(config any) *Install {
-	configMap := *mustCastMap(config)
-	groups := parseGroups(configMap["groups"])
+func Parse(config any) (*Install, error) {
+	var (
+		configMap *map[string]any
+		groups    []Group
+		err       error
+	)
 
-	return &Install{
+	if configMap, err = cast[map[string]any](config); err != nil {
+		return nil, err
+	}
+	if groups, err = parseGroups((*configMap)["groups"]); err != nil {
+		return nil, err
+	}
+
+	install := &Install{
 		Groups: groups,
 	}
+
+	return install, nil
 }
 
-func parseGroups(config any) []Group {
-	groupsSlice := *mustCast[[]any](config)
-	groups := make([]Group, 0, len(groupsSlice))
+func parseGroups(config any) ([]Group, error) {
+	var (
+		groupsSlice *[]any
+		err         error
+	)
 
-	for _, groupConfig := range groupsSlice {
-		groupMap := *mustCastMap(groupConfig)
-		group := *parseGroup(groupMap)
-		groups = append(groups, group)
+	if groupsSlice, err = cast[[]any](config); err != nil {
+		return nil, err
+	}
+	groups := make([]Group, 0, len(*groupsSlice))
+
+	for _, groupConfig := range *groupsSlice {
+		var (
+			groupMap *map[string]any
+			group    *Group
+		)
+
+		if groupMap, err = cast[map[string]any](groupConfig); err != nil {
+			return nil, err
+		}
+		if group, err = parseGroup(*groupMap); err != nil {
+			return nil, err
+		}
+		groups = append(groups, *group)
 	}
 
-	return groups
+	return groups, nil
 }
 
-func parseGroup(config map[string]any) *Group {
-	name := mustGetStringDefault("name", config, "any")
-	os := mustGetStringDefault("os", config, "any")
-	arch := mustGetStringDefault("arch", config, "any")
+func parseGroup(config map[string]any) (*Group, error) {
+	var (
+		name           string
+		os             string
+		arch           string
+		commandConfigs *[]any
+		commands       []Command
+		err            error
+	)
 
-	commandConfigs := *mustGet[[]any]("commands", config)
-	commands := parseCommands(commandConfigs)
+	if name, err = getStringDefault("name", config, "any"); err != nil {
+		return nil, err
+	}
+	if os, err = getStringDefault("os", config, "any"); err != nil {
+		return nil, err
+	}
+	if arch, err = getStringDefault("arch", config, "any"); err != nil {
+		return nil, err
+	}
 
-	return &Group{
+	if commandConfigs, err = get[[]any]("commands", config); err != nil {
+		return nil, err
+	}
+	if commands, err = parseCommands(*commandConfigs); err != nil {
+		return nil, err
+	}
+
+	group := &Group{
 		Name:     name,
 		Os:       os,
 		Arch:     arch,
 		Commands: commands,
 	}
+
+	return group, nil
 }
 
-func parseCommands(config []any) []Command {
+func parseCommands(config []any) ([]Command, error) {
 	commands := make([]Command, 0, len(config))
 	for _, commandConfig := range config {
-		command := *parseCommand(commandConfig)
-		commands = append(commands, command)
+		var (
+			command *Command
+			err     error
+		)
+
+		if command, err = parseCommand(commandConfig); err != nil {
+			return nil, err
+		}
+
+		commands = append(commands, *command)
 	}
 
-	return commands
+	return commands, nil
 }
 
-func parseCommand(config any) *Command {
-	return mustParseEither(
+func parseCommand(config any) (*Command, error) {
+	return parseEither(
 		config,
 		parseCommandMap,
 		parseCommandString,
 	)
 }
 
-func parseCommandMap(config map[string]any) *Command {
-	command := *mustGet[string]("command", config)
-	os := mustGetStringDefault("os", config, "any")
-	arch := mustGetStringDefault("arch", config, "any")
+func parseCommandMap(config map[string]any) (*Command, error) {
+	var (
+		command string
+		os      string
+		arch    string
+		err     error
+	)
 
-	return &Command{
-		Command: command,
-		Os:      os,
-		Arch:    arch,
+	if command, err = getString("command", config); err != nil {
+		return nil, err
 	}
+	if os, err = getStringDefault("os", config, "any"); err != nil {
+		return nil, err
+	}
+	if arch, err = getStringDefault("arch", config, "any"); err != nil {
+		return nil, err
+	}
+
+	return &Command{Command: command, Os: os, Arch: arch}, nil
 }
 
-func parseCommandString(config string) *Command {
-	return &Command{
-		Command: config,
-		Os:      "any",
-		Arch:    "any",
-	}
-}
-
-func mustParseEither[T any, E any, C any](
-	config any,
-	parseT func(config T) *C,
-	parseE func(config E) *C,
-) *C {
-	result, err := parseEither(config, parseT, parseE)
-	if err != nil {
-		panic(err)
-	}
-	return result
+func parseCommandString(config string) (*Command, error) {
+	return &Command{Command: config, Os: "any", Arch: "any"}, nil
 }
 
 func parseEither[T any, E any, C any](
 	config any,
-	parseT func(config T) *C,
-	parseE func(config E) *C,
+	parseT func(config T) (*C, error),
+	parseE func(config E) (*C, error),
 ) (*C, error) {
 	switch config := config.(type) {
 	case T:
-		return parseT(config), nil
+		return parseT(config)
 	case E:
-		return parseE(config), nil
+		return parseE(config)
 	}
 
 	return nil, fmt.Errorf(
@@ -121,24 +170,20 @@ func cast[T any](obj any) (*T, error) {
 	return nil, fmt.Errorf("expected a map[string] but got %T", obj)
 }
 
-func mustCast[T any](obj any) *T {
-	result, err := cast[T](obj)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-
-func mustCastMap(obj any) *map[string]any {
-	return mustCast[map[string]any](obj)
-}
-
 func get[T any](key string, config map[string]any) (*T, error) {
 	configValue, exists := config[key]
 	if !exists {
 		return nil, fmt.Errorf("expected map to contain %s but did not", key)
 	}
 	return cast[T](configValue)
+}
+
+func getString(key string, config map[string]any) (string, error) {
+	result, err := get[string](key, config)
+	if err != nil {
+		return "", err
+	}
+	return *result, nil
 }
 
 func getDefault[T any](key string, config map[string]any, def *T) (*T, error) {
@@ -149,34 +194,14 @@ func getDefault[T any](key string, config map[string]any, def *T) (*T, error) {
 	return cast[T](configValue)
 }
 
-func mustGet[T any](key string, config map[string]any) *T {
-	result, err := get[T](key, config)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-
-func mustGetDefault[T any](key string, config map[string]any, def *T) *T {
-	result, err := getDefault(key, config, def)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-
-func mustGetStringDefault(
+func getStringDefault(
 	key string,
 	config map[string]any,
 	def string,
-) string {
-	return *mustGetDefault(key, config, &def)
-}
-
-func Print(install *Install) {
-	jsonBytes, err := json.MarshalIndent(install, "", "  ")
+) (string, error) {
+	result, err := getDefault(key, config, &def)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	fmt.Printf("%s\n", jsonBytes)
+	return *result, nil
 }
