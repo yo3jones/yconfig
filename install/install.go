@@ -1,6 +1,7 @@
 package install
 
 import (
+	"os"
 	"runtime"
 )
 
@@ -10,7 +11,7 @@ type Installer interface {
 }
 
 type installer struct {
-	config any
+	config *any
 	inst   *Install
 	os     OsType
 	arch   ArchType
@@ -29,6 +30,12 @@ func (instr *installer) Install() error {
 		return err
 	}
 
+	if err = filter(instr.inst); err != nil {
+		return err
+	}
+
+	instr.inst.Print()
+
 	if err = instr.execGroups(); err != nil {
 		return err
 	}
@@ -36,7 +43,7 @@ func (instr *installer) Install() error {
 	return nil
 }
 
-func New(config any) (Installer, error) {
+func New(config *any) (Installer, error) {
 	var (
 		osType   OsType
 		archType ArchType
@@ -74,16 +81,6 @@ func (instr *installer) parse() error {
 	return nil
 }
 
-func (instr *installer) shouldExec(hasEnv HasEnv) bool {
-	if !instr.os.ShouldExec(hasEnv.GetOs()) {
-		return false
-	}
-	if !instr.arch.ShouldExec(hasEnv.GetArch()) {
-		return false
-	}
-	return true
-}
-
 func (instr *installer) execGroups() error {
 	for _, groupName := range instr.groups {
 		var (
@@ -104,7 +101,7 @@ func (instr *installer) execGroups() error {
 }
 
 func (instr *installer) execGroup(group *Group) error {
-	if !instr.shouldExec(group) {
+	if group.Status == Skipped {
 		return nil
 	}
 
@@ -119,10 +116,15 @@ func (instr *installer) execGroup(group *Group) error {
 }
 
 func (instr *installer) execCommand(command *Command) error {
-	if !instr.shouldExec(command) {
+	if command.Status == Skipped {
 		return nil
 	}
 
-	command.Print()
+	var err error
+
+	if err = ExecBashCommand(command.Command, os.Stdout); err != nil {
+		return err
+	}
+
 	return nil
 }

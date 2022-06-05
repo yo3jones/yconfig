@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func Parse(config any) (*Install, error) {
+func Parse(config *any) (*Install, error) {
 	var (
 		configMap *map[string]any
 		groups    []Group
@@ -14,7 +14,8 @@ func Parse(config any) (*Install, error) {
 	if configMap, err = cast[map[string]any](config); err != nil {
 		return nil, err
 	}
-	if groups, err = parseGroups((*configMap)["groups"]); err != nil {
+	groupsConfig := (*configMap)["groups"]
+	if groups, err = parseGroups(&groupsConfig); err != nil {
 		return nil, err
 	}
 
@@ -25,7 +26,7 @@ func Parse(config any) (*Install, error) {
 	return install, nil
 }
 
-func parseGroups(config any) ([]Group, error) {
+func parseGroups(config *any) ([]Group, error) {
 	var (
 		groupsSlice *[]any
 		err         error
@@ -36,16 +37,17 @@ func parseGroups(config any) ([]Group, error) {
 	}
 	groups := make([]Group, 0, len(*groupsSlice))
 
-	for _, groupConfig := range *groupsSlice {
+	for i := range *groupsSlice {
 		var (
 			groupMap *map[string]any
 			group    *Group
 		)
 
-		if groupMap, err = cast[map[string]any](groupConfig); err != nil {
+		groupConfig := (*groupsSlice)[i]
+		if groupMap, err = cast[map[string]any](&groupConfig); err != nil {
 			return nil, err
 		}
-		if group, err = parseGroup(*groupMap); err != nil {
+		if group, err = parseGroup(groupMap); err != nil {
 			return nil, err
 		}
 		groups = append(groups, *group)
@@ -54,7 +56,7 @@ func parseGroups(config any) ([]Group, error) {
 	return groups, nil
 }
 
-func parseGroup(config map[string]any) (*Group, error) {
+func parseGroup(config *map[string]any) (*Group, error) {
 	var (
 		name           string
 		osString       string
@@ -75,11 +77,7 @@ func parseGroup(config map[string]any) (*Group, error) {
 	if archString, err = getStringDefault("arch", config, "any"); err != nil {
 		return nil, err
 	}
-
 	if commandConfigs, err = get[[]any]("commands", config); err != nil {
-		return nil, err
-	}
-	if commands, err = parseCommands(*commandConfigs); err != nil {
 		return nil, err
 	}
 	if os, err = OsTypeFromString(osString); err != nil {
@@ -90,24 +88,28 @@ func parseGroup(config map[string]any) (*Group, error) {
 	}
 
 	group := &Group{
-		Name:     name,
-		Os:       os,
-		Arch:     arch,
-		Commands: commands,
+		Name: name,
+		Os:   os,
+		Arch: arch,
 	}
+
+	if commands, err = parseCommands(commandConfigs); err != nil {
+		return nil, err
+	}
+	group.Commands = commands
 
 	return group, nil
 }
 
-func parseCommands(config []any) ([]Command, error) {
-	commands := make([]Command, 0, len(config))
-	for _, commandConfig := range config {
+func parseCommands(config *[]any) ([]Command, error) {
+	commands := make([]Command, 0, len(*config))
+	for i := range *config {
 		var (
 			command *Command
 			err     error
 		)
 
-		if command, err = parseCommand(commandConfig); err != nil {
+		if command, err = parseCommand(&(*config)[i]); err != nil {
 			return nil, err
 		}
 
@@ -117,15 +119,25 @@ func parseCommands(config []any) ([]Command, error) {
 	return commands, nil
 }
 
-func parseCommand(config any) (*Command, error) {
-	return parseEither(
+func parseCommand(config *any) (*Command, error) {
+	var (
+		command *Command
+		err     error
+	)
+
+	command, err = parseEither(
 		config,
 		parseCommandMap,
 		parseCommandString,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return command, nil
 }
 
-func parseCommandMap(config map[string]any) (*Command, error) {
+func parseCommandMap(config *map[string]any) (*Command, error) {
 	var (
 		commandString string
 		osString      string
@@ -160,9 +172,9 @@ func parseCommandMap(config map[string]any) (*Command, error) {
 	return command, nil
 }
 
-func parseCommandString(config string) (*Command, error) {
+func parseCommandString(config *string) (*Command, error) {
 	command := &Command{
-		Command: config,
+		Command: *config,
 		Os:      OsAny,
 		Arch:    ArchAny,
 	}
@@ -171,15 +183,15 @@ func parseCommandString(config string) (*Command, error) {
 }
 
 func parseEither[T any, E any, C any](
-	config any,
-	parseT func(config T) (*C, error),
-	parseE func(config E) (*C, error),
+	config *any,
+	parseT func(config *T) (*C, error),
+	parseE func(config *E) (*C, error),
 ) (*C, error) {
-	switch config := config.(type) {
+	switch config := (*config).(type) {
 	case T:
-		return parseT(config)
+		return parseT(&config)
 	case E:
-		return parseE(config)
+		return parseE(&config)
 	}
 
 	return nil, fmt.Errorf(
@@ -190,23 +202,23 @@ func parseEither[T any, E any, C any](
 	)
 }
 
-func cast[T any](obj any) (*T, error) {
-	switch obj := obj.(type) {
+func cast[T any](obj *any) (*T, error) {
+	switch obj := (*obj).(type) {
 	case T:
 		return &obj, nil
 	}
 	return nil, fmt.Errorf("expected a map[string] but got %T", obj)
 }
 
-func get[T any](key string, config map[string]any) (*T, error) {
-	configValue, exists := config[key]
+func get[T any](key string, config *map[string]any) (*T, error) {
+	configValue, exists := (*config)[key]
 	if !exists {
 		return nil, fmt.Errorf("expected map to contain %s but did not", key)
 	}
-	return cast[T](configValue)
+	return cast[T](&configValue)
 }
 
-func getString(key string, config map[string]any) (string, error) {
+func getString(key string, config *map[string]any) (string, error) {
 	result, err := get[string](key, config)
 	if err != nil {
 		return "", err
@@ -214,17 +226,17 @@ func getString(key string, config map[string]any) (string, error) {
 	return *result, nil
 }
 
-func getDefault[T any](key string, config map[string]any, def *T) (*T, error) {
-	configValue, exists := config[key]
+func getDefault[T any](key string, config *map[string]any, def *T) (*T, error) {
+	configValue, exists := (*config)[key]
 	if !exists {
 		return def, nil
 	}
-	return cast[T](configValue)
+	return cast[T](&configValue)
 }
 
 func getStringDefault(
 	key string,
-	config map[string]any,
+	config *map[string]any,
 	def string,
 ) (string, error) {
 	result, err := getDefault(key, config, &def)

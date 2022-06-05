@@ -15,12 +15,14 @@ type Group struct {
 	Commands []Command
 	Os       OsType
 	Arch     ArchType
+	Status   Status
 }
 
 type Command struct {
 	Command string
 	Os      OsType
 	Arch    ArchType
+	Status  Status
 }
 
 type HasEnv interface {
@@ -42,6 +44,37 @@ func (command *Command) GetOs() OsType {
 
 func (command *Command) GetArch() ArchType {
 	return command.Arch
+}
+
+type Status int
+
+const (
+	Unknown Status = iota
+	Skipped
+	Waiting
+	Running
+	Complete
+	Error
+)
+
+func (status Status) String() string {
+	switch status {
+	case Skipped:
+		return "Skipped"
+	case Waiting:
+		return "Waiting"
+	case Running:
+		return "Running"
+	case Complete:
+		return "Complete"
+	case Error:
+		return "Error"
+	}
+	return "Unknown"
+}
+
+func (status Status) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, status)), nil
 }
 
 type OsType int
@@ -151,13 +184,6 @@ func OsTypeFromString(str string) (OsType, error) {
 
 func (osType OsType) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, osType)), nil
-}
-
-func (osType OsType) ShouldExec(otherOsType OsType) bool {
-	if otherOsType == OsAny {
-		return true
-	}
-	return osType == otherOsType
 }
 
 type ArchType int
@@ -302,13 +328,6 @@ func ArchTypeFromString(str string) (ArchType, error) {
 
 func (archType ArchType) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, archType)), nil
-}
-
-func (archType ArchType) ShouldExec(otherArchType ArchType) bool {
-	if otherArchType == ArchAny {
-		return true
-	}
-	return archType == otherArchType
 }
 
 func (inst *Install) GetGroupByName(name string) (*Group, error) {
