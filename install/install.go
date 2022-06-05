@@ -1,5 +1,9 @@
 package install
 
+import (
+	"runtime"
+)
+
 type Installer interface {
 	Install() error
 }
@@ -7,6 +11,8 @@ type Installer interface {
 type installer struct {
 	config any
 	inst   *Install
+	os     OsType
+	arch   ArchType
 }
 
 func (ir *installer) Install() error {
@@ -26,8 +32,25 @@ func (ir *installer) Install() error {
 	return nil
 }
 
-func New(config any) Installer {
-	return &installer{
-		config: config,
+func New(config any) (Installer, error) {
+	var (
+		osType   OsType
+		archType ArchType
+		err      error
+	)
+
+	if osType, err = OsTypeFromString(runtime.GOOS); err != nil {
+		return nil, err
 	}
+	if archType, err = ArchTypeFromString(runtime.GOARCH); err != nil {
+		return nil, err
+	}
+
+	instr := &installer{
+		config: config,
+		os:     osType,
+		arch:   archType,
+	}
+
+	return instr, nil
 }

@@ -15,8 +15,12 @@ var installCmd = &cobra.Command{
 
 		config := viper.Get("install")
 
-		err = install.New(config).
-			Install()
+		installer, err := install.New(config)
+		if err != nil {
+			panic(err)
+		}
+
+		err = installer.Install()
 		if err != nil {
 			panic(err)
 		}
