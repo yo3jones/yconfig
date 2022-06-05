@@ -18,7 +18,9 @@ func init() {
 	viper.AddConfigPath(".")
 	viper.SetConfigType("yaml")
 	viper.SetConfigName(".yconfig")
-	viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		panic(err)
+	}
 }
 
 func Execute() {
