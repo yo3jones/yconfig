@@ -11,16 +11,15 @@ var installCmd = &cobra.Command{
 	Short: "run configured install scripts",
 	Long:  "run configured install scripts",
 	Run: func(_ *cobra.Command, _ []string) {
-		var (
-			inst *install.Install
-			err  error
-		)
+		var err error
 
-		if inst, err = install.Parse(viper.Get("install")); err != nil {
+		config := viper.Get("install")
+
+		err = install.New(config).
+			Install()
+		if err != nil {
 			panic(err)
 		}
-
-		install.Print(inst)
 	},
 }
 
