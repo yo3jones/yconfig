@@ -1,6 +1,6 @@
 package install
 
-type Config struct {
+type Install struct {
 	Groups []Group
 }
 

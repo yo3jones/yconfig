@@ -5,11 +5,11 @@ import (
 	"fmt"
 )
 
-func Parse(config any) *Config {
+func Parse(config any) *Install {
 	configMap := *mustCastMap(config)
 	groups := parseGroups(configMap["groups"])
 
-	return &Config{
+	return &Install{
 		Groups: groups,
 	}
 }
@@ -173,8 +173,8 @@ func mustGetStringDefault(
 	return *mustGetDefault(key, config, &def)
 }
 
-func Print(config *Config) {
-	jsonBytes, err := json.MarshalIndent(config, "", "  ")
+func Print(install *Install) {
+	jsonBytes, err := json.MarshalIndent(install, "", "  ")
 	if err != nil {
 		panic(err)
 	}

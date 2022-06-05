@@ -11,8 +11,8 @@ var installCmd = &cobra.Command{
 	Short: "run configured install scripts",
 	Long:  "run configured install scripts",
 	Run: func(_ *cobra.Command, _ []string) {
-		config := install.Parse(viper.Get("install"))
-		install.Print(config)
+		inst := install.Parse(viper.Get("install"))
+		install.Print(inst)
 	},
 }
 
