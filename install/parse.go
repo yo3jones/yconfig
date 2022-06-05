@@ -57,8 +57,10 @@ func parseGroups(config any) ([]Group, error) {
 func parseGroup(config map[string]any) (*Group, error) {
 	var (
 		name           string
-		os             string
-		arch           string
+		osString       string
+		os             OsType
+		archString     string
+		arch           ArchType
 		commandConfigs *[]any
 		commands       []Command
 		err            error
@@ -67,10 +69,10 @@ func parseGroup(config map[string]any) (*Group, error) {
 	if name, err = getStringDefault("name", config, "any"); err != nil {
 		return nil, err
 	}
-	if os, err = getStringDefault("os", config, "any"); err != nil {
+	if osString, err = getStringDefault("os", config, "any"); err != nil {
 		return nil, err
 	}
-	if arch, err = getStringDefault("arch", config, "any"); err != nil {
+	if archString, err = getStringDefault("arch", config, "any"); err != nil {
 		return nil, err
 	}
 
@@ -80,11 +82,17 @@ func parseGroup(config map[string]any) (*Group, error) {
 	if commands, err = parseCommands(*commandConfigs); err != nil {
 		return nil, err
 	}
+	if os, err = OsTypeFromString(osString); err != nil {
+		return nil, err
+	}
+	if arch, err = ArchTypeFromString(archString); err != nil {
+		return nil, err
+	}
 
 	group := &Group{
 		Name:     name,
-		Os:       OsTypeFromString(os),
-		Arch:     ArchTypeFromString(arch),
+		Os:       os,
+		Arch:     arch,
 		Commands: commands,
 	}
 
@@ -120,25 +128,33 @@ func parseCommand(config any) (*Command, error) {
 func parseCommandMap(config map[string]any) (*Command, error) {
 	var (
 		commandString string
-		os            string
-		arch          string
+		osString      string
+		os            OsType
+		archString    string
+		arch          ArchType
 		err           error
 	)
 
 	if commandString, err = getString("command", config); err != nil {
 		return nil, err
 	}
-	if os, err = getStringDefault("os", config, "any"); err != nil {
+	if osString, err = getStringDefault("os", config, "any"); err != nil {
 		return nil, err
 	}
-	if arch, err = getStringDefault("arch", config, "any"); err != nil {
+	if archString, err = getStringDefault("arch", config, "any"); err != nil {
+		return nil, err
+	}
+	if os, err = OsTypeFromString(osString); err != nil {
+		return nil, err
+	}
+	if arch, err = ArchTypeFromString(archString); err != nil {
 		return nil, err
 	}
 
 	command := &Command{
 		Command: commandString,
-		Os:      OsTypeFromString(os),
-		Arch:    ArchTypeFromString(arch),
+		Os:      os,
+		Arch:    arch,
 	}
 
 	return command, nil

@@ -86,44 +86,46 @@ func (osType OsType) String() string {
 	return "any"
 }
 
-func OsTypeFromString(str string) OsType {
+func OsTypeFromString(str string) (OsType, error) {
 	switch strings.ToLower(str) {
+	case "any":
+		return OsAny, nil
 	case "aix":
-		return OsAix
+		return OsAix, nil
 	case "android":
-		return OsAndroid
+		return OsAndroid, nil
 	case "darwin":
-		return OsDarwin
+		return OsDarwin, nil
 	case "dragonfly":
-		return OsDragonfly
+		return OsDragonfly, nil
 	case "freebsd":
-		return OsFreebsd
+		return OsFreebsd, nil
 	case "hurd":
-		return OsHurd
+		return OsHurd, nil
 	case "illumos":
-		return OsIllumos
+		return OsIllumos, nil
 	case "ios":
-		return OsIos
+		return OsIos, nil
 	case "js":
-		return OsJs
+		return OsJs, nil
 	case "linux":
-		return OsLinux
+		return OsLinux, nil
 	case "nacl":
-		return OsNacl
+		return OsNacl, nil
 	case "netbsd":
-		return OsNetbsd
+		return OsNetbsd, nil
 	case "openbsd":
-		return OsOpenbsd
+		return OsOpenbsd, nil
 	case "plan9":
-		return OsPlan9
+		return OsPlan9, nil
 	case "solaris":
-		return OsSolaris
+		return OsSolaris, nil
 	case "windows":
-		return OsWindows
+		return OsWindows, nil
 	case "zos":
-		return OsZos
+		return OsZos, nil
 	}
-	return OsAny
+	return OsAny, fmt.Errorf("unknown os type %s", str)
 }
 
 func (osType OsType) MarshalJSON() ([]byte, error) {
@@ -214,58 +216,60 @@ func (archType ArchType) String() string {
 	return "any"
 }
 
-func ArchTypeFromString(str string) ArchType {
+func ArchTypeFromString(str string) (ArchType, error) {
 	switch strings.ToLower(str) {
+	case "any":
+		return ArchAny, nil
 	case "386":
-		return Arch386
+		return Arch386, nil
 	case "amd64":
-		return ArchAmd64
+		return ArchAmd64, nil
 	case "amd64p32":
-		return ArchAmd64p32
+		return ArchAmd64p32, nil
 	case "arm":
-		return ArchArm
+		return ArchArm, nil
 	case "arm64":
-		return ArchArm64
+		return ArchArm64, nil
 	case "arm64be":
-		return ArchArm64be
+		return ArchArm64be, nil
 	case "armbe":
-		return ArchArmbe
+		return ArchArmbe, nil
 	case "loong64":
-		return ArchLoong64
+		return ArchLoong64, nil
 	case "mips":
-		return ArchMips
+		return ArchMips, nil
 	case "mips64":
-		return ArchMips64
+		return ArchMips64, nil
 	case "mips64le":
-		return ArchMips64le
+		return ArchMips64le, nil
 	case "mips64p32":
-		return ArchMips64p32
+		return ArchMips64p32, nil
 	case "mips64p32le":
-		return ArchMips64p32le
+		return ArchMips64p32le, nil
 	case "mipsle":
-		return ArchMipsle
+		return ArchMipsle, nil
 	case "ppc":
-		return ArchPpc
+		return ArchPpc, nil
 	case "ppc64":
-		return ArchPpc64
+		return ArchPpc64, nil
 	case "ppc64le":
-		return ArchPpc64le
+		return ArchPpc64le, nil
 	case "riscv":
-		return ArchRiscv
+		return ArchRiscv, nil
 	case "riscv64":
-		return ArchRiscv64
+		return ArchRiscv64, nil
 	case "s390":
-		return ArchS390
+		return ArchS390, nil
 	case "s390x":
-		return ArchS390x
+		return ArchS390x, nil
 	case "sparc":
-		return ArchSparc
+		return ArchSparc, nil
 	case "sparc64":
-		return ArchSparc64
+		return ArchSparc64, nil
 	case "wasm":
-		return ArchWasm
+		return ArchWasm, nil
 	}
-	return ArchAny
+	return ArchAny, fmt.Errorf("unknown arch type %s", str)
 }
 
 func (archType ArchType) MarshalJSON() ([]byte, error) {
