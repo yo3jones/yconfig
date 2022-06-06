@@ -1,0 +1,8 @@
+#!/bin/bash
+
+version=$1
+
+gh release create \
+  $version \
+  dist/yconfig-* \
+  --title $version \

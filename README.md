@@ -6,3 +6,9 @@ yo3 config
 ```
 ./scripts/dist
 ```
+
+## Release
+
+```
+./scripts/releave v0.0.1
+```
