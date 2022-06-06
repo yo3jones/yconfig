@@ -1,7 +1,6 @@
 package install
 
 import (
-	"fmt"
 	"runtime"
 )
 
@@ -122,10 +121,13 @@ func (instr *installer) execGroup(group *Group) error {
 		return nil
 	}
 
-	for _, command := range group.Commands {
-		var err error
+	for i := range group.Commands {
+		var (
+			command = &group.Commands[i]
+			err     error
+		)
 
-		if err = instr.execCommand(&command); err != nil {
+		if err = instr.execCommand(command); err != nil {
 			return err
 		}
 	}
@@ -142,7 +144,7 @@ func (instr *installer) execCommand(command *Command) error {
 
 	var err error
 
-	writer := newCommandWriter(command)
+	writer := newCommandWriter(instr, command)
 
 	if err = ExecBashCommand(command.Command, writer); err != nil {
 		command.Status = Error
@@ -150,7 +152,6 @@ func (instr *installer) execCommand(command *Command) error {
 		return err
 	}
 
-	fmt.Printf("\n\n%s\n", command.Out)
 	command.Status = Complete
 	instr.triggerProgess()
 
