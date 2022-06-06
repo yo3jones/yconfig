@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/yo3jones/yconfig/install"
@@ -23,6 +25,9 @@ var installCmd = &cobra.Command{
 
 		err = installer.
 			Groups(args).
+			OnProgress(func(_ *install.Install) {
+				fmt.Println("progress")
+			}).
 			Install()
 		if err != nil {
 			panic(err)

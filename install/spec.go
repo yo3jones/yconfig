@@ -23,6 +23,7 @@ type Command struct {
 	Os      OsType
 	Arch    ArchType
 	Status  Status
+	Out     []byte
 }
 
 type HasEnv interface {

@@ -1,13 +1,17 @@
 package install
 
-import "runtime"
+import (
+	"runtime"
+	"strings"
+)
 
 type context struct {
 	runtimeOs   OsType
 	runtimeArch ArchType
+	groupNames  map[string]bool
 }
 
-func newContext() (*context, error) {
+func newContext(groupNames []string) (*context, error) {
 	var (
 		runtimeOs   OsType
 		runtimeArch ArchType
@@ -21,9 +25,15 @@ func newContext() (*context, error) {
 		return nil, err
 	}
 
+	groupNamesSet := map[string]bool{}
+	for _, groupName := range groupNames {
+		groupNamesSet[strings.ToLower(groupName)] = true
+	}
+
 	context := &context{
 		runtimeOs:   runtimeOs,
 		runtimeArch: runtimeArch,
+		groupNames:  groupNamesSet,
 	}
 
 	return context, nil
@@ -66,13 +76,13 @@ func shouldExecuteArch(runtimeArch, configArch ArchType) bool {
 	return false
 }
 
-func filter(inst *Install) error {
+func filter(inst *Install, groupNames []string) error {
 	var (
 		cxt *context
 		err error
 	)
 
-	if cxt, err = newContext(); err != nil {
+	if cxt, err = newContext(groupNames); err != nil {
 		return err
 	}
 
@@ -89,6 +99,12 @@ func filterGroups(cxt *context, groups []Group) {
 
 func filterGroup(cxt *context, group *Group) {
 	group.Status = cxt.getConfigInitialStatus(group)
+
+	_, contains := cxt.groupNames[strings.ToLower(group.Name)]
+	if !contains {
+		group.Status = Skipped
+	}
+
 	filterCommands(cxt, group, group.Commands)
 }
 
