@@ -29,19 +29,33 @@ type installMsg string
 const (
 	progressMsg installMsg = "progress"
 	completeMsg installMsg = "complete"
+	errorMsg    installMsg = "error"
 )
 
 var (
 	groupLineStyle = lipgloss.NewStyle().
-			PaddingTop(1)
+			PaddingTop(1).
+			Bold(true).
+			Underline(true)
 
 	commandLineStyle = lipgloss.NewStyle().
-				PaddingLeft(3)
+				PaddingLeft(2)
+
+	bracketStyle = lipgloss.NewStyle().
+			Bold(true)
+
+	statusStyle = lipgloss.NewStyle().
+			PaddingLeft(1).
+			PaddingRight(1).
+			Width(10).
+			Align(lipgloss.Right).
+			Foreground(lipgloss.Color("10"))
 
 	viewportStyle = lipgloss.NewStyle().
 			MarginLeft(5).
 			PaddingLeft(2).
-			Border(lipgloss.NormalBorder(), false, false, false, true)
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(lipgloss.Color("12"))
 )
 
 var installCmd = &cobra.Command{
@@ -50,6 +64,7 @@ var installCmd = &cobra.Command{
 	Long:  "run configured install scripts",
 	Args:  cobra.ArbitraryArgs,
 	Run: func(_ *cobra.Command, args []string) {
+		installError := false
 		program := tea.NewProgram(initModel())
 
 		go func() {
@@ -66,17 +81,21 @@ var installCmd = &cobra.Command{
 				}).
 				Install()
 			if err != nil {
+				installError = true
+				program.Send(progressMsg)
+				program.Send(errorMsg)
+			} else {
 				program.Send(progressMsg)
 				program.Send(completeMsg)
-				os.Exit(1)
 			}
-
-			program.Send(progressMsg)
-			program.Send(completeMsg)
 		}()
 
 		if err := program.Start(); err != nil {
 			panic(err)
+		}
+
+		if installError {
+			os.Exit(1)
 		}
 	},
 }
@@ -88,9 +107,11 @@ func init() {
 func initModel() tea.Model {
 	viewport := viewport.New(100, 5)
 
-	return &installModel{
+	m := &installModel{
 		viewport: &viewport,
 	}
+
+	return m
 }
 
 func (m *installModel) Init() tea.Cmd {
@@ -104,7 +125,10 @@ func (m *installModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case installMsg:
-		if msg == completeMsg {
+		switch msg {
+		case completeMsg:
+			return m, tea.Quit
+		case errorMsg:
 			return m, tea.Quit
 		}
 	case tea.WindowSizeMsg:
@@ -146,21 +170,28 @@ func (m *installModel) updateCounts() {
 
 	viewportMaxHeight := m.height - groupsHeight - commandsHeight - 2
 
-	if viewportMaxHeight > 0 {
-		m.viewport.Height = viewportMaxHeight
-		m.viewportMaxHeight = viewportMaxHeight
+	if viewportMaxHeight < 10 {
+		viewportMaxHeight = 10
 	}
+
+	m.viewport.Height = viewportMaxHeight
+	m.viewportMaxHeight = viewportMaxHeight
 }
 
 func (m *installModel) View() string {
 	if m.inst == nil {
 		return ""
 	}
-	return m.groupsView(m.inst.Groups)
+
+	sb := &strings.Builder{}
+
+	return m.groupsView(sb, m.inst.Groups)
 }
 
-func (m *installModel) groupsView(groups []install.Group) string {
-	sb := &strings.Builder{}
+func (m *installModel) groupsView(
+	sb *strings.Builder,
+	groups []install.Group,
+) string {
 	for i := range groups {
 		group := &groups[i]
 		m.groupView(sb, group)
@@ -251,14 +282,38 @@ func getOutLineCount(out []byte) int {
 	return count
 }
 
+var commandLineTemplate string = fmt.Sprintf(
+	"%s%%s%s %%s",
+	bracketStyle.Render("["),
+	bracketStyle.Render("]"),
+)
+
 func (m *installModel) commandLineView(command *install.Command) string {
 	return commandLineStyle.Render(
 		fmt.Sprintf(
-			"[%s] %s",
-			command.Status,
+			commandLineTemplate,
+			getStatusStyle(command).Render(command.Status.String()),
 			truncCommand(command.Command),
 		),
 	)
+}
+
+func getStatusStyle(command *install.Command) *lipgloss.Style {
+	style := statusStyle.Copy()
+
+	switch command.Status {
+	case install.Skipped:
+	case install.Waiting:
+		style.Foreground(lipgloss.Color("13"))
+	case install.Running:
+		style.Foreground(lipgloss.Color("12"))
+	case install.Complete:
+		style.Foreground(lipgloss.Color("10"))
+	case install.Error:
+		style.Foreground(lipgloss.Color("9"))
+	}
+
+	return &style
 }
 
 var (
