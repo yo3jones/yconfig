@@ -6,12 +6,14 @@ import (
 
 type Installer interface {
 	Groups(groups []string) Installer
+	All(all bool) Installer
 	OnProgress(onProgress func(inst *Install)) Installer
 	Install() error
 }
 
 type installer struct {
 	config     *any
+	all        bool
 	inst       *Install
 	os         OsType
 	arch       ArchType
@@ -47,6 +49,11 @@ func (instr *installer) Groups(groups []string) Installer {
 	return instr
 }
 
+func (instr *installer) All(all bool) Installer {
+	instr.all = all
+	return instr
+}
+
 func (instr *installer) OnProgress(onProgress func(inst *Install)) Installer {
 	instr.onProgress = onProgress
 	return instr
@@ -61,7 +68,7 @@ func (instr *installer) Install() error {
 		return err
 	}
 
-	if err = filter(instr.inst, instr.groups); err != nil {
+	if err = filter(instr.inst, instr.groups, instr.all); err != nil {
 		return err
 	}
 

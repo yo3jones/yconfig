@@ -10,11 +10,20 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install [GROUPS]",
+	Use:   "install [GROUPS] [OPTIONS]",
 	Short: "run configured install scripts",
 	Long:  "run configured install scripts",
 	Args:  cobra.ArbitraryArgs,
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
+		var (
+			all bool
+			err error
+		)
+
+		if all, err = cmd.Flags().GetBool("all"); err != nil {
+			panic(err)
+		}
+
 		installError := false
 		program := tea.NewProgram(install.InitModel())
 
@@ -27,6 +36,7 @@ var installCmd = &cobra.Command{
 
 			err = installer.
 				Groups(args).
+				All(all).
 				OnProgress(func(inst *install.Install) {
 					program.Send(inst)
 				}).
@@ -52,5 +62,7 @@ var installCmd = &cobra.Command{
 }
 
 func init() {
+	installCmd.Flags().Bool("all", false, "set to insall all groups")
+
 	rootCmd.AddCommand(installCmd)
 }
