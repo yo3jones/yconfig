@@ -16,8 +16,9 @@ var installCmd = &cobra.Command{
 	Args:  cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		var (
-			all bool
-			err error
+			all  bool
+			tags []string
+			err  error
 		)
 
 		if all, err = cmd.Flags().GetBool("all"); err != nil {
@@ -37,6 +38,7 @@ var installCmd = &cobra.Command{
 			err = installer.
 				Groups(args).
 				All(all).
+				Tags(tags).
 				OnProgress(func(inst *install.Install) {
 					program.Send(inst)
 				}).
@@ -63,6 +65,11 @@ var installCmd = &cobra.Command{
 
 func init() {
 	installCmd.Flags().Bool("all", false, "set to insall all groups")
+	installCmd.Flags().StringSlice(
+		"tag",
+		[]string{},
+		"tags to filter groups and commands to install",
+	)
 
 	rootCmd.AddCommand(installCmd)
 }

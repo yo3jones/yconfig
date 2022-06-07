@@ -7,6 +7,7 @@ import (
 type Installer interface {
 	Groups(groups []string) Installer
 	All(all bool) Installer
+	Tags(tags []string) Installer
 	OnProgress(onProgress func(inst *Install)) Installer
 	Install() error
 }
@@ -14,6 +15,7 @@ type Installer interface {
 type installer struct {
 	config     *any
 	all        bool
+	tags       []string
 	inst       *Install
 	os         OsType
 	arch       ArchType
@@ -51,6 +53,11 @@ func (instr *installer) Groups(groups []string) Installer {
 
 func (instr *installer) All(all bool) Installer {
 	instr.all = all
+	return instr
+}
+
+func (instr *installer) Tags(tags []string) Installer {
+	instr.tags = tags
 	return instr
 }
 
