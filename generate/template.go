@@ -3,14 +3,24 @@ package generate
 import (
 	"os"
 	"runtime"
+	"strings"
 	"text/template"
 )
 
 type TemplateContext struct {
-	OS string
+	OS   string
+	Tags map[string]bool
 }
 
-func generateTemplate(templateName, destinationName string) error {
+func (c *TemplateContext) ForTag(tag string) bool {
+	_, exists := c.Tags[strings.ToLower(tag)]
+	return exists
+}
+
+func generateTemplate(
+	templateName, destinationName string,
+	tags map[string]bool,
+) error {
 	if err := prepareDestination(destinationName); err != nil {
 		return err
 	}
@@ -27,7 +37,8 @@ func generateTemplate(templateName, destinationName string) error {
 	defer f.Close()
 
 	context := &TemplateContext{
-		OS: runtime.GOOS,
+		OS:   runtime.GOOS,
+		Tags: tags,
 	}
 
 	err3 := t.Execute(f, context)

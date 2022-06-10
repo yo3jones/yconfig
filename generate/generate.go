@@ -2,6 +2,7 @@ package generate
 
 import (
 	"path"
+	"strings"
 	"time"
 )
 
@@ -11,6 +12,7 @@ type Generator interface {
 	Include(include []string) Generator
 	Exclude(exclude []string) Generator
 	Link(link bool) Generator
+	Tags(tags []string) Generator
 	Delay(delay int) Generator
 	OnProgress(onProgress func(progress *Progress)) Generator
 	Generate() error
@@ -58,6 +60,7 @@ type generator struct {
 	include         []string
 	exclude         []string
 	link            bool
+	tags            map[string]bool
 	delay           int
 	onProgress      func(progress *Progress)
 	templates       []string
@@ -86,6 +89,15 @@ func (g *generator) Exclude(exclude []string) Generator {
 
 func (g *generator) Link(link bool) Generator {
 	g.link = link
+	return g
+}
+
+func (g *generator) Tags(tags []string) Generator {
+	tagsSet := make(map[string]bool, len(tags))
+	for _, tag := range tags {
+		tagsSet[strings.ToLower(tag)] = true
+	}
+	g.tags = tagsSet
 	return g
 }
 
@@ -141,7 +153,8 @@ func (g *generator) generateTemplate(i int) error {
 	relativeName := getRelativePath(g.templateRoot, templateName)
 	destinationName := path.Join(g.destinationRoot, relativeName)
 
-	if err := generateTemplate(templateName, destinationName); err != nil {
+	err := generateTemplate(templateName, destinationName, g.tags)
+	if err != nil {
 		g.notifyProgress(i, Error)
 		return err
 	}
