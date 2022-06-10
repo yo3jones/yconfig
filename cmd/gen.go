@@ -23,6 +23,8 @@ const (
 	pathExclude      string = "generate.exclude"
 	nameLink         string = "link"
 	pathLink         string = "generate.link"
+	nameTags         string = "tag"
+	pathTags         string = "generate.tags"
 	nameDelay        string = "delay"
 	pathDelay        string = "generate.delay"
 )
@@ -47,6 +49,7 @@ var genCmd = &cobra.Command{
 		include := viper.GetStringSlice(pathInclude)
 		exclude := viper.GetStringSlice(pathExclude)
 		link := viper.GetBool(pathLink)
+		tags := viper.GetStringSlice(pathTags)
 		delay := viper.GetInt(pathDelay)
 
 		program := tea.NewProgram(model{})
@@ -58,6 +61,7 @@ var genCmd = &cobra.Command{
 				Include(include).
 				Exclude(exclude).
 				Link(link).
+				Tags(tags).
 				Delay(delay).
 				OnProgress(func(progress *generate.Progress) {
 					program.Send(ProgressMsg{progress})
@@ -129,6 +133,16 @@ func init() {
 		"whether to link the generated config files to the users home dir",
 	)
 	err = viper.BindPFlag(pathLink, genCmd.Flags().Lookup(nameLink))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	genCmd.Flags().StringSlice(
+		nameTags,
+		[]string{},
+		"tags that can be used in the config templates",
+	)
+	err = viper.BindPFlag(pathTags, genCmd.Flags().Lookup(nameTags))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
