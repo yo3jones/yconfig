@@ -8,6 +8,13 @@ import (
 	"github.com/yo3jones/yconfig/ostypes"
 )
 
+type PackageManager struct {
+	Os     ostypes.Os
+	Arch   archtypes.Arch
+	Tags   map[string]bool
+	Script string
+}
+
 type Setup struct {
 	Entries []Entry
 }
@@ -161,6 +168,10 @@ func (setup *Setup) Print() {
 
 func (entry *Entry) Print() {
 	Print(entry)
+}
+
+func (pm *PackageManager) Print() {
+	Print(pm)
 }
 
 func Print(obj any) {
