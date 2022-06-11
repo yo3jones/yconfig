@@ -136,14 +136,14 @@ func TagsGet(
 ) (tags, requiredTags map[string]bool, exists bool, err error) {
 	var rawTags *[]string
 
+	tags = map[string]bool{}
+	requiredTags = map[string]bool{}
+
 	if rawTags, exists, err = StringSliceGet(obj, key); err != nil {
 		return nil, nil, exists, err
 	} else if !exists {
-		return nil, nil, false, nil
+		return tags, requiredTags, false, nil
 	}
-
-	tags = map[string]bool{}
-	requiredTags = map[string]bool{}
 
 	for _, tag := range *rawTags {
 		if strings.HasSuffix(tag, "!") {

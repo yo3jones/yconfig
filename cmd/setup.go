@@ -13,6 +13,7 @@ var setupCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, _ []string) {
 		var (
 			s   *setup.Setup
+			pms []setup.PackageManager
 			err error
 		)
 
@@ -22,6 +23,15 @@ var setupCmd = &cobra.Command{
 		}
 
 		s.Print()
+
+		pmsConfig := viper.Get("packageManagers")
+		if pms, err = setup.ParsePackageManagers(&pmsConfig); err != nil {
+			panic(err)
+		}
+
+		for _, pm := range pms {
+			pm.Print()
+		}
 	},
 }
 
