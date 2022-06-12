@@ -17,14 +17,14 @@ func Cast[T any](obj *any) (*T, error) {
 	return nil, fmt.Errorf("error casting type %T", obj)
 }
 
-func StringSliceCast(obj *any) (ptrStringSlice *[]string, err error) {
+func StringSliceCast(obj *any) (strSlice []string, err error) {
 	var slice *[]any
 
 	if slice, err = Cast[[]any](obj); err != nil {
 		return nil, err
 	}
 
-	stringSlice := make([]string, len(*slice))
+	strSlice = make([]string, len(*slice))
 	for i, val := range *slice {
 		var str *string
 
@@ -32,12 +32,10 @@ func StringSliceCast(obj *any) (ptrStringSlice *[]string, err error) {
 			return nil, err
 		}
 
-		stringSlice[i] = *str
+		strSlice[i] = *str
 	}
 
-	ptrStringSlice = &stringSlice
-
-	return ptrStringSlice, nil
+	return strSlice, nil
 }
 
 func Get[T any](
@@ -59,35 +57,28 @@ func Get[T any](
 func StringSliceGet(
 	obj *map[string]any,
 	key string,
-) (strs *[]string, exists bool, err error) {
-	var (
-		val  *any
-		vals []string
-	)
+) (strs []string, exists bool, err error) {
+	var val *any
 
 	if val, exists, err = Get[any](obj, key); err != nil {
 		return nil, exists, err
 	} else if !exists {
-		return nil, false, nil
+		return []string{}, false, nil
 	}
 
 	switch castedVal := (*val).(type) {
 	case string:
-		vals = make([]string, 1)
-		vals[0] = castedVal
+		strs = make([]string, 1)
+		strs[0] = castedVal
 	case []any:
-		var ptrVals *[]string
-		if ptrVals, err = StringSliceCast(val); err != nil {
+		if strs, err = StringSliceCast(val); err != nil {
 			return nil, true, err
 		}
-		vals = *ptrVals
 	default:
 		return nil,
 			true,
 			fmt.Errorf("expected either a string or []string but got %T", val)
 	}
-
-	strs = &vals
 
 	return strs, true, nil
 }
@@ -134,7 +125,7 @@ func TagsGet(
 	obj *map[string]any,
 	key string,
 ) (tags, requiredTags map[string]bool, exists bool, err error) {
-	var rawTags *[]string
+	var rawTags []string
 
 	tags = map[string]bool{}
 	requiredTags = map[string]bool{}
@@ -145,7 +136,7 @@ func TagsGet(
 		return tags, requiredTags, false, nil
 	}
 
-	for _, tag := range *rawTags {
+	for _, tag := range rawTags {
 		if strings.HasSuffix(tag, "!") {
 			normalizedTag := tag[:len(tag)-1]
 			requiredTags[normalizedTag] = true

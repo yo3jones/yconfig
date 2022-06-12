@@ -3,16 +3,53 @@ package setup
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
 )
+
+type System interface {
+	PackageManager() *PackageManager
+	Script() *Script
+}
 
 type PackageManager struct {
 	Os     ostypes.Os
 	Arch   archtypes.Arch
 	Tags   map[string]bool
 	Script string
+}
+
+func (pm *PackageManager) BuildCommand(
+	script *Script,
+	packages []string,
+) (cmd string, args []string) {
+	pmScriptParts := make([]string, 0, len(packages)+1)
+	pmScriptParts = append(pmScriptParts, pm.Script)
+	pmScriptParts = append(pmScriptParts, packages...)
+
+	pmScript := strings.Join(pmScriptParts, " ")
+
+	return script.BuildCommand(pmScript)
+}
+
+type Script struct {
+	Os   ostypes.Os
+	Arch archtypes.Arch
+	Tags map[string]bool
+	Cmd  string
+	Args []string
+}
+
+func (s *Script) BuildCommand(script string) (cmd string, args []string) {
+	cmd = s.Cmd
+
+	args = make([]string, 0, len(s.Args)+1)
+	args = append(args, s.Args...)
+	args = append(args, script)
+
+	return cmd, args
 }
 
 type Setup struct {
@@ -35,6 +72,7 @@ type Value interface {
 	GetArch() archtypes.Arch
 	GetTags() map[string]bool
 	GetRequiredTags() map[string]bool
+	BuildCommand(system System) (cmd string, args []string)
 }
 
 type PackageValue struct {
@@ -66,6 +104,11 @@ func (v *PackageValue) GetRequiredTags() map[string]bool {
 	return v.RequiredTags
 }
 
+func (v *PackageValue) BuildCommand(system System) (cmd string, args []string) {
+	return system.PackageManager().
+		BuildCommand(system.Script(), v.Packages)
+}
+
 type ScriptValue struct {
 	Os           ostypes.Os
 	Arch         archtypes.Arch
@@ -93,6 +136,10 @@ func (v *ScriptValue) GetTags() map[string]bool {
 
 func (v *ScriptValue) GetRequiredTags() map[string]bool {
 	return v.RequiredTags
+}
+
+func (v *ScriptValue) BuildCommand(system System) (cmd string, args []string) {
+	return system.Script().BuildCommand(v.Script)
 }
 
 type CommandValue struct {
@@ -123,6 +170,10 @@ func (v *CommandValue) GetTags() map[string]bool {
 
 func (v *CommandValue) GetRequiredTags() map[string]bool {
 	return v.RequiredTags
+}
+
+func (v *CommandValue) BuildCommand(_ System) (cmd string, args []string) {
+	return v.Cmd, v.Args
 }
 
 type Type int
@@ -172,6 +223,10 @@ func (entry *Entry) Print() {
 
 func (pm *PackageManager) Print() {
 	Print(pm)
+}
+
+func (script *Script) Print() {
+	Print(script)
 }
 
 func Print(obj any) {

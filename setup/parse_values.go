@@ -230,7 +230,7 @@ func parsePackageSpecifics(
 ) (err error) {
 	var (
 		exists   bool
-		packages *[]string
+		packages []string
 	)
 
 	if packages, exists, err = parse.StringSliceGet(config, "packages"); err != nil {
@@ -242,7 +242,7 @@ func parsePackageSpecifics(
 		)
 	}
 
-	value.Packages = *packages
+	value.Packages = packages
 
 	return nil
 }
@@ -353,7 +353,7 @@ func parseCommandValueSpecifics(
 	var (
 		exists bool
 		cmd    *string
-		args   *[]string
+		args   []string
 	)
 
 	if cmd, exists, err = parse.Get[string](config, "cmd"); err != nil {
@@ -365,14 +365,12 @@ func parseCommandValueSpecifics(
 		)
 	}
 
-	if args, exists, err = parse.StringSliceGet(config, "args"); err != nil {
+	if args, _, err = parse.StringSliceGet(config, "args"); err != nil {
 		return err
-	} else if !exists {
-		args = &[]string{}
 	}
 
 	value.Cmd = *cmd
-	value.Args = *args
+	value.Args = args
 
 	return nil
 }
