@@ -47,11 +47,12 @@ func parsePackageManager(
 	config map[string]any,
 ) (pm *PackageManager, err error) {
 	var (
-		exists bool
-		os     ostypes.Os
-		arch   archtypes.Arch
-		tags   map[string]bool
-		script *string
+		exists       bool
+		os           ostypes.Os
+		arch         archtypes.Arch
+		tags         map[string]bool
+		requiredTags map[string]bool
+		script       *string
 	)
 
 	if os, _, err = parse.OsGet(&config, "os"); err != nil {
@@ -62,7 +63,7 @@ func parsePackageManager(
 		return nil, err
 	}
 
-	if tags, _, _, err = parse.TagsGet(&config, "tags"); err != nil {
+	if tags, requiredTags, _, err = parse.TagsGet(&config, "tags"); err != nil {
 		return nil, err
 	}
 
@@ -73,10 +74,11 @@ func parsePackageManager(
 	}
 
 	pm = &PackageManager{
-		Os:     os,
-		Arch:   arch,
-		Tags:   tags,
-		Script: *script,
+		Os:           os,
+		Arch:         arch,
+		Tags:         tags,
+		RequiredTags: requiredTags,
+		Script:       *script,
 	}
 
 	return pm, nil

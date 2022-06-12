@@ -14,11 +14,41 @@ type System interface {
 	Script() *Script
 }
 
+type Tagger interface {
+	GetTags() map[string]bool
+	GetRequiredTags() map[string]bool
+}
+
+type Oser interface {
+	GetOs() ostypes.Os
+}
+
+type Archer interface {
+	GetArch() archtypes.Arch
+}
+
 type PackageManager struct {
-	Os     ostypes.Os
-	Arch   archtypes.Arch
-	Tags   map[string]bool
-	Script string
+	Os           ostypes.Os
+	Arch         archtypes.Arch
+	Tags         map[string]bool
+	RequiredTags map[string]bool
+	Script       string
+}
+
+func (pm *PackageManager) GetOs() ostypes.Os {
+	return pm.Os
+}
+
+func (pm *PackageManager) GetArch() archtypes.Arch {
+	return pm.Arch
+}
+
+func (pm *PackageManager) GetTags() map[string]bool {
+	return pm.Tags
+}
+
+func (pm *PackageManager) GetRequiredTags() map[string]bool {
+	return pm.RequiredTags
 }
 
 func (pm *PackageManager) BuildCommand(
@@ -35,11 +65,28 @@ func (pm *PackageManager) BuildCommand(
 }
 
 type Script struct {
-	Os   ostypes.Os
-	Arch archtypes.Arch
-	Tags map[string]bool
-	Cmd  string
-	Args []string
+	Os           ostypes.Os
+	Arch         archtypes.Arch
+	Tags         map[string]bool
+	RequiredTags map[string]bool
+	Cmd          string
+	Args         []string
+}
+
+func (s *Script) GetOs() ostypes.Os {
+	return s.Os
+}
+
+func (s *Script) GetArch() archtypes.Arch {
+	return s.Arch
+}
+
+func (s *Script) GetTags() map[string]bool {
+	return s.Tags
+}
+
+func (s *Script) GetRequiredTags() map[string]bool {
+	return s.RequiredTags
 }
 
 func (s *Script) BuildCommand(script string) (cmd string, args []string) {
@@ -67,21 +114,27 @@ type Entry struct {
 }
 
 type Value interface {
+	GetName() string
 	GetType() Type
-	GetOs() ostypes.Os
-	GetArch() archtypes.Arch
-	GetTags() map[string]bool
-	GetRequiredTags() map[string]bool
+	Oser
+	Archer
+	Tagger
 	BuildCommand(system System) (cmd string, args []string)
+	Printer
 }
 
 type PackageValue struct {
+	Name         string
 	Os           ostypes.Os
 	Arch         archtypes.Arch
 	Tags         map[string]bool
 	RequiredTags map[string]bool
 
 	Packages []string
+}
+
+func (v *PackageValue) GetName() string {
+	return v.Name
 }
 
 func (v *PackageValue) GetType() Type {
@@ -110,12 +163,17 @@ func (v *PackageValue) BuildCommand(system System) (cmd string, args []string) {
 }
 
 type ScriptValue struct {
+	Name         string
 	Os           ostypes.Os
 	Arch         archtypes.Arch
 	Tags         map[string]bool
 	RequiredTags map[string]bool
 
 	Script string
+}
+
+func (v *ScriptValue) GetName() string {
+	return v.Name
 }
 
 func (v *ScriptValue) GetType() Type {
@@ -143,6 +201,7 @@ func (v *ScriptValue) BuildCommand(system System) (cmd string, args []string) {
 }
 
 type CommandValue struct {
+	Name         string
 	Os           ostypes.Os
 	Arch         archtypes.Arch
 	Tags         map[string]bool
@@ -150,6 +209,10 @@ type CommandValue struct {
 
 	Cmd  string
 	Args []string
+}
+
+func (v *CommandValue) GetName() string {
+	return v.Name
 }
 
 func (v *CommandValue) GetType() Type {
@@ -213,7 +276,7 @@ type Printer interface {
 	Print()
 }
 
-func (t Type) Marshal() ([]byte, error) {
+func (t Type) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, t)), nil
 }
 
@@ -231,6 +294,18 @@ func (pm *PackageManager) Print() {
 
 func (script *Script) Print() {
 	Print(script)
+}
+
+func (v *PackageValue) Print() {
+	Print(v)
+}
+
+func (v *ScriptValue) Print() {
+	Print(v)
+}
+
+func (v *CommandValue) Print() {
+	Print(v)
 }
 
 func SlicePrint[T Printer, E ~[]T](slice E) {

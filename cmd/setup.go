@@ -6,6 +6,8 @@ import (
 	"github.com/yo3jones/yconfig/setup"
 )
 
+var tags []string
+
 var setupCmd = &cobra.Command{
 	Use:   "setup [Name]",
 	Short: "execute setup steps",
@@ -21,6 +23,10 @@ var setupCmd = &cobra.Command{
 			ScriptsConfig(&scriptsConfig).
 			PackageManagersConfig(&packageManagersConfig).
 			Config(&config).
+			Tags(tags).
+			OnProgress(func(progress []*setup.Progress) {
+				setup.Print(progress)
+			}).
 			Setup(); err != nil {
 			panic(err)
 		}
@@ -28,5 +34,8 @@ var setupCmd = &cobra.Command{
 }
 
 func init() {
+	setupCmd.Flags().
+		StringSliceVar(&tags, "tag", []string{}, "tags used for filtering")
+
 	rootCmd.AddCommand(setupCmd)
 }
