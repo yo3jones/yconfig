@@ -6,6 +6,8 @@ type Setuper interface {
 	ScriptsConfig(scriptsConfig *any) Setuper
 	PackageManagersConfig(packageManagersConfig *any) Setuper
 	Config(config *any) Setuper
+	Tags(tags []string) Setuper
+	OnProgress(onProgress func(progress []*Progress)) Setuper
 	Setup() (err error)
 }
 
@@ -13,9 +15,50 @@ type setuper struct {
 	scriptsConfig         *any
 	packageManagersConfig *any
 	config                *any
+	onProgress            func(progress []*Progress)
 	scripts               []*Script
 	packageManagers       []*PackageManager
+	tags                  map[string]bool
 	setup                 *Setup
+	systemScript          *Script
+	systemPackageManager  *PackageManager
+	values                []Value
+	progress              []*Progress
+}
+
+type Status int
+
+const (
+	StatusUknown Status = iota
+	StatusWaiting
+	StatusRunning
+	StatusComplete
+	StatusError
+)
+
+func (s Status) String() string {
+	switch s {
+	case StatusWaiting:
+		return "waiting"
+	case StatusRunning:
+		return "running"
+	case StatusComplete:
+		return "complete"
+	case StatusError:
+		return "error"
+	}
+
+	return "unknown"
+}
+
+func (s Status) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, s)), nil
+}
+
+type Progress struct {
+	Value  Value
+	Status Status
+	Out    []byte
 }
 
 func New() Setuper {
@@ -37,16 +80,50 @@ func (s *setuper) Config(config *any) Setuper {
 	return s
 }
 
+func (s *setuper) OnProgress(onProgress func(progress []*Progress)) Setuper {
+	s.onProgress = onProgress
+	return s
+}
+
+func (s *setuper) Tags(tags []string) Setuper {
+	tagsSet := make(map[string]bool, len(tags))
+	for _, tag := range tags {
+		tagsSet[tag] = true
+	}
+	s.tags = tagsSet
+	return s
+}
+
 func (s *setuper) Setup() (err error) {
+	if err = s.prepare(); err != nil {
+		return err
+	}
+
+	s.onProgress(s.progress)
+
+	return nil
+}
+
+func (s *setuper) prepare() (err error) {
 	if err = s.parseConfigs(); err != nil {
 		return err
 	}
 
-	s.setup.Print()
-	fmt.Printf("\n Package Managers \n\n")
-	SlicePrint(s.packageManagers)
-	fmt.Printf("\n Scripts \n\n")
-	SlicePrint(s.scripts)
+	// s.setup.Print()
+	// fmt.Printf("\n Package Managers \n\n")
+	// SlicePrint(s.packageManagers)
+	// fmt.Printf("\n Scripts \n\n")
+	// SlicePrint(s.scripts)
+
+	if err = s.filter(); err != nil {
+		return err
+	}
+
+	// s.systemScript.Print()
+	// s.systemPackageManager.Print()
+	// SlicePrint(s.values)
+
+	s.prepareProgress()
 
 	return nil
 }
@@ -66,4 +143,43 @@ func (s *setuper) parseConfigs() (err error) {
 	}
 
 	return nil
+}
+
+func (s *setuper) filter() (err error) {
+	filterer := NewFilterer().
+		Tags(s.tags)
+
+	s.systemScript, err = filterer.FilterSystemScripts(s.scripts)
+	if err != nil {
+		return err
+	}
+
+	s.systemPackageManager, err = filterer.FilterSystemPackageManagers(
+		s.packageManagers,
+	)
+	if err != nil {
+		return err
+	}
+
+	if s.values, err = filterer.FilterValues(s.setup); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *setuper) prepareProgress() {
+	progressSlice := make([]*Progress, len(s.values))
+	for i, v := range s.values {
+		progressSlice[i] = &Progress{
+			Value:  v,
+			Status: StatusWaiting,
+			Out:    []byte{},
+		}
+	}
+	s.progress = progressSlice
+
+	if s.onProgress == nil {
+		s.onProgress = func(_ []*Progress) {}
+	}
 }

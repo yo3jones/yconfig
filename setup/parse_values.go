@@ -191,6 +191,7 @@ func parsePackageValueEntryMap(
 	entry *Entry,
 ) (values []Value, err error) {
 	value := &PackageValue{
+		Name:         entry.Name,
 		Os:           entry.Os,
 		Arch:         entry.Arch,
 		Tags:         entry.Tags,
@@ -210,6 +211,7 @@ func parsePackageValue(
 	entry *Entry,
 ) (value *PackageValue, err error) {
 	value = &PackageValue{
+		Name:         entry.Name,
 		Os:           vf.os,
 		Arch:         vf.arch,
 		Tags:         vf.tags,
@@ -252,6 +254,7 @@ func parseScriptValueEntryMap(
 	entry *Entry,
 ) (values []Value, err error) {
 	value := &ScriptValue{
+		Name:         entry.Name,
 		Os:           entry.Os,
 		Arch:         entry.Arch,
 		Tags:         entry.Tags,
@@ -271,6 +274,7 @@ func parseScriptValue(
 	entry *Entry,
 ) (value *ScriptValue, err error) {
 	value = &ScriptValue{
+		Name:         entry.Name,
 		Os:           vf.os,
 		Arch:         vf.arch,
 		Tags:         vf.tags,
@@ -313,6 +317,7 @@ func parseCommandValueEntryMap(
 	entry *Entry,
 ) (values []Value, err error) {
 	value := &CommandValue{
+		Name:         entry.Name,
 		Os:           entry.Os,
 		Arch:         entry.Arch,
 		Tags:         entry.Tags,
@@ -332,6 +337,7 @@ func parseCommandValue(
 	entry *Entry,
 ) (value *CommandValue, err error) {
 	value = &CommandValue{
+		Name:         entry.Name,
 		Os:           vf.os,
 		Arch:         vf.arch,
 		Tags:         vf.tags,

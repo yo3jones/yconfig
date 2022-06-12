@@ -43,12 +43,13 @@ func parseScripts(config []any) (scripts []*Script, err error) {
 
 func parseScript(config map[string]any) (script *Script, err error) {
 	var (
-		exists bool
-		os     ostypes.Os
-		arch   archtypes.Arch
-		tags   map[string]bool
-		cmd    *string
-		args   []string
+		exists       bool
+		os           ostypes.Os
+		arch         archtypes.Arch
+		tags         map[string]bool
+		requiredTags map[string]bool
+		cmd          *string
+		args         []string
 	)
 
 	if os, _, err = parse.OsGet(&config, "os"); err != nil {
@@ -59,7 +60,7 @@ func parseScript(config map[string]any) (script *Script, err error) {
 		return nil, err
 	}
 
-	if tags, _, _, err = parse.TagsGet(&config, "tags"); err != nil {
+	if tags, requiredTags, _, err = parse.TagsGet(&config, "tags"); err != nil {
 		return nil, err
 	}
 
@@ -74,11 +75,12 @@ func parseScript(config map[string]any) (script *Script, err error) {
 	}
 
 	script = &Script{
-		Os:   os,
-		Arch: arch,
-		Tags: tags,
-		Cmd:  *cmd,
-		Args: args,
+		Os:           os,
+		Arch:         arch,
+		Tags:         tags,
+		RequiredTags: requiredTags,
+		Cmd:          *cmd,
+		Args:         args,
 	}
 
 	return script, nil
