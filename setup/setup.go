@@ -65,6 +65,14 @@ func New() Setuper {
 	return &setuper{}
 }
 
+func (s *setuper) Script() *Script {
+	return s.systemScript
+}
+
+func (s *setuper) PackageManager() *PackageManager {
+	return s.systemPackageManager
+}
+
 func (s *setuper) ScriptsConfig(scriptsConfig *any) Setuper {
 	s.scriptsConfig = scriptsConfig
 	return s
@@ -100,6 +108,10 @@ func (s *setuper) Setup() (err error) {
 	}
 
 	s.onProgress(s.progress)
+
+	if err = s.execAll(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -182,4 +194,35 @@ func (s *setuper) prepareProgress() {
 	if s.onProgress == nil {
 		s.onProgress = func(_ []*Progress) {}
 	}
+}
+
+func (s *setuper) execAll() (err error) {
+	for _, progress := range s.progress {
+		if err = s.exec(progress); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *setuper) exec(progress *Progress) (err error) {
+	progress.Status = StatusRunning
+	s.onProgress(s.progress)
+
+	cmd, args := progress.Value.BuildCommand(s)
+	writer := NewWriter(&progress.Out, func() {
+		s.onProgress(s.progress)
+	})
+
+	if err = Exec(cmd, args, writer); err != nil {
+		progress.Status = StatusError
+		s.onProgress(s.progress)
+		return err
+	}
+
+	progress.Status = StatusComplete
+	s.onProgress(s.progress)
+
+	return nil
 }
