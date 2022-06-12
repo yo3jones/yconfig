@@ -5,7 +5,7 @@ import "github.com/yo3jones/yconfig/parse"
 func Parse(config *any) (*Setup, error) {
 	var (
 		entriesConfig *[]any
-		entries       []Entry
+		entries       []*Entry
 		err           error
 	)
 

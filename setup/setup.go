@@ -13,8 +13,8 @@ type setuper struct {
 	scriptsConfig         *any
 	packageManagersConfig *any
 	config                *any
-	scripts               []Script
-	packageManagers       []PackageManager
+	scripts               []*Script
+	packageManagers       []*PackageManager
 	setup                 *Setup
 }
 
@@ -43,16 +43,10 @@ func (s *setuper) Setup() (err error) {
 	}
 
 	s.setup.Print()
-
-	fmt.Printf("\npackageManagers\n\n")
-	for _, pm := range s.packageManagers {
-		pm.Print()
-	}
-
-	fmt.Printf("\nscripts\n\n")
-	for _, script := range s.scripts {
-		script.Print()
-	}
+	fmt.Printf("\n Package Managers \n\n")
+	SlicePrint(s.packageManagers)
+	fmt.Printf("\n Scripts \n\n")
+	SlicePrint(s.scripts)
 
 	return nil
 }

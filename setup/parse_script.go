@@ -8,7 +8,7 @@ import (
 	"github.com/yo3jones/yconfig/parse"
 )
 
-func ParseScripts(config *any) (scripts []Script, err error) {
+func ParseScripts(config *any) (scripts []*Script, err error) {
 	var configSlice *[]any
 
 	if configSlice, err = parse.Cast[[]any](config); err != nil {
@@ -18,8 +18,8 @@ func ParseScripts(config *any) (scripts []Script, err error) {
 	return parseScripts(*configSlice)
 }
 
-func parseScripts(config []any) (scripts []Script, err error) {
-	scripts = make([]Script, len(config))
+func parseScripts(config []any) (scripts []*Script, err error) {
+	scripts = make([]*Script, len(config))
 
 	for i := range config {
 		var (
@@ -35,7 +35,7 @@ func parseScripts(config []any) (scripts []Script, err error) {
 			return nil, err
 		}
 
-		scripts[i] = *script
+		scripts[i] = script
 	}
 
 	return scripts, nil

@@ -8,7 +8,7 @@ import (
 	"github.com/yo3jones/yconfig/parse"
 )
 
-func ParsePackageManagers(config *any) (pms []PackageManager, err error) {
+func ParsePackageManagers(config *any) (pms []*PackageManager, err error) {
 	var configSlice *[]any
 
 	if configSlice, err = parse.Cast[[]any](config); err != nil {
@@ -18,8 +18,8 @@ func ParsePackageManagers(config *any) (pms []PackageManager, err error) {
 	return parsePackageManagers(*configSlice)
 }
 
-func parsePackageManagers(config []any) (pms []PackageManager, err error) {
-	pms = make([]PackageManager, len(config))
+func parsePackageManagers(config []any) (pms []*PackageManager, err error) {
+	pms = make([]*PackageManager, len(config))
 
 	for i := range config {
 		var (
@@ -37,7 +37,7 @@ func parsePackageManagers(config []any) (pms []PackageManager, err error) {
 			return nil, err
 		}
 
-		pms[i] = *pm
+		pms[i] = pm
 	}
 
 	return pms, nil

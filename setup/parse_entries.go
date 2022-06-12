@@ -8,8 +8,8 @@ import (
 	"github.com/yo3jones/yconfig/parse"
 )
 
-func parseEntries(config *[]any) ([]Entry, error) {
-	entries := make([]Entry, 0, len(*config))
+func parseEntries(config *[]any) ([]*Entry, error) {
+	entries := make([]*Entry, 0, len(*config))
 	for i := range *config {
 		var (
 			entry *Entry
@@ -22,7 +22,7 @@ func parseEntries(config *[]any) ([]Entry, error) {
 			return nil, err
 		}
 
-		entries = append(entries, *entry)
+		entries = append(entries, entry)
 	}
 
 	return entries, nil

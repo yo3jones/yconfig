@@ -53,7 +53,7 @@ func (s *Script) BuildCommand(script string) (cmd string, args []string) {
 }
 
 type Setup struct {
-	Entries []Entry
+	Entries []*Entry
 }
 
 type Entry struct {
@@ -209,6 +209,10 @@ func TypeFromString(str string) (Type, error) {
 	return TypeUnknown, fmt.Errorf("no setup type for string %s", str)
 }
 
+type Printer interface {
+	Print()
+}
+
 func (t Type) Marshal() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, t)), nil
 }
@@ -227,6 +231,12 @@ func (pm *PackageManager) Print() {
 
 func (script *Script) Print() {
 	Print(script)
+}
+
+func SlicePrint[T Printer, E ~[]T](slice E) {
+	for _, p := range slice {
+		p.Print()
+	}
 }
 
 func Print(obj any) {
