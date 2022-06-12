@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/yo3jones/yconfig/setup"
@@ -12,9 +14,10 @@ var setupCmd = &cobra.Command{
 	Long:  "execute setup steps",
 	Run: func(_ *cobra.Command, _ []string) {
 		var (
-			s   *setup.Setup
-			pms []setup.PackageManager
-			err error
+			s       *setup.Setup
+			pms     []setup.PackageManager
+			scripts []setup.Script
+			err     error
 		)
 
 		config := viper.Get("setup")
@@ -29,8 +32,19 @@ var setupCmd = &cobra.Command{
 			panic(err)
 		}
 
+		fmt.Println("packageManagers")
 		for _, pm := range pms {
 			pm.Print()
+		}
+
+		scriptsConfig := viper.Get("scripts")
+		if scripts, err = setup.ParseScripts(&scriptsConfig); err != nil {
+			panic(err)
+		}
+
+		fmt.Println("scripts")
+		for _, script := range scripts {
+			script.Print()
 		}
 	},
 }
