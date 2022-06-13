@@ -1,12 +1,16 @@
 package setup
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Setuper interface {
 	ScriptsConfig(scriptsConfig *any) Setuper
 	PackageManagersConfig(packageManagersConfig *any) Setuper
 	Config(config *any) Setuper
 	Tags(tags []string) Setuper
+	Delay(delay int) Setuper
 	OnProgress(onProgress func(progress []*Progress)) Setuper
 	Setup() (err error)
 }
@@ -15,10 +19,11 @@ type setuper struct {
 	scriptsConfig         *any
 	packageManagersConfig *any
 	config                *any
+	tags                  map[string]bool
+	delay                 int
 	onProgress            func(progress []*Progress)
 	scripts               []*Script
 	packageManagers       []*PackageManager
-	tags                  map[string]bool
 	setup                 *Setup
 	systemScript          *Script
 	systemPackageManager  *PackageManager
@@ -88,17 +93,22 @@ func (s *setuper) Config(config *any) Setuper {
 	return s
 }
 
-func (s *setuper) OnProgress(onProgress func(progress []*Progress)) Setuper {
-	s.onProgress = onProgress
-	return s
-}
-
 func (s *setuper) Tags(tags []string) Setuper {
 	tagsSet := make(map[string]bool, len(tags))
 	for _, tag := range tags {
 		tagsSet[tag] = true
 	}
 	s.tags = tagsSet
+	return s
+}
+
+func (s *setuper) Delay(delay int) Setuper {
+	s.delay = delay
+	return s
+}
+
+func (s *setuper) OnProgress(onProgress func(progress []*Progress)) Setuper {
+	s.onProgress = onProgress
 	return s
 }
 
@@ -207,6 +217,8 @@ func (s *setuper) execAll() (err error) {
 }
 
 func (s *setuper) exec(progress *Progress) (err error) {
+	s.doDelay()
+
 	progress.Status = StatusRunning
 	s.onProgress(s.progress)
 
@@ -221,8 +233,18 @@ func (s *setuper) exec(progress *Progress) (err error) {
 		return err
 	}
 
+	s.doDelay()
+
 	progress.Status = StatusComplete
 	s.onProgress(s.progress)
 
 	return nil
+}
+
+func (s *setuper) doDelay() {
+	if s.delay <= 0 {
+		return
+	}
+
+	time.Sleep(time.Duration(s.delay) * time.Millisecond)
 }
