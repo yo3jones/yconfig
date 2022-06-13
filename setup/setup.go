@@ -10,6 +10,7 @@ type Setuper interface {
 	PackageManagersConfig(packageManagersConfig *any) Setuper
 	Config(config *any) Setuper
 	Tags(tags []string) Setuper
+	EntryNames(entryNames []string) Setuper
 	Delay(delay int) Setuper
 	OnProgress(onProgress func(progress []*Progress)) Setuper
 	Setup() (err error)
@@ -20,6 +21,7 @@ type setuper struct {
 	packageManagersConfig *any
 	config                *any
 	tags                  map[string]bool
+	entryNames            map[string]bool
 	delay                 int
 	onProgress            func(progress []*Progress)
 	scripts               []*Script
@@ -102,6 +104,14 @@ func (s *setuper) Tags(tags []string) Setuper {
 	return s
 }
 
+func (s *setuper) EntryNames(entryNames []string) Setuper {
+	s.entryNames = make(map[string]bool, len(entryNames))
+	for _, entryName := range entryNames {
+		s.entryNames[entryName] = true
+	}
+	return s
+}
+
 func (s *setuper) Delay(delay int) Setuper {
 	s.delay = delay
 	return s
@@ -169,7 +179,8 @@ func (s *setuper) parseConfigs() (err error) {
 
 func (s *setuper) filter() (err error) {
 	filterer := NewFilterer().
-		Tags(s.tags)
+		Tags(s.tags).
+		EntryNames(s.entryNames)
 
 	s.systemScript, err = filterer.FilterSystemScripts(s.scripts)
 	if err != nil {

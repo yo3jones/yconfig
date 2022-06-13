@@ -16,6 +16,7 @@ type Filterable interface {
 
 type Filterer interface {
 	Tags(tags map[string]bool) Filterer
+	EntryNames(entryNames map[string]bool) Filterer
 	FilterSystemScripts(scripts []*Script) (systemScript *Script, err error)
 	FilterSystemPackageManagers(
 		packageManagers []*PackageManager,
@@ -24,10 +25,11 @@ type Filterer interface {
 }
 
 type filterer struct {
-	runtimeOs   ostypes.Os
-	runtimeArch archtypes.Arch
-	runtimeTags map[string]bool
-	initialized bool
+	runtimeOs         ostypes.Os
+	runtimeArch       archtypes.Arch
+	runtimeTags       map[string]bool
+	runtimeEntryNames map[string]bool
+	initialized       bool
 }
 
 const (
@@ -42,6 +44,11 @@ func NewFilterer() Filterer {
 func (f *filterer) Tags(tags map[string]bool) Filterer {
 	f.runtimeTags = tags
 	f.initialized = false
+	return f
+}
+
+func (f *filterer) EntryNames(entryNames map[string]bool) Filterer {
+	f.runtimeEntryNames = entryNames
 	return f
 }
 
@@ -78,7 +85,12 @@ func (f *filterer) FilterSystemPackageManagers(
 func (f *filterer) FilterValues(setup *Setup) (values []Value, err error) {
 	values = make([]Value, 0, len(setup.Entries))
 
+	hasEntryNames := len(f.runtimeEntryNames) > 0
 	for _, entry := range setup.Entries {
+		if exists := f.runtimeEntryNames[entry.Name]; hasEntryNames && !exists {
+			continue
+		}
+
 		foundValue, found, err := filter(f, entry.Values, restrictive)
 		if err != nil {
 			return nil, err

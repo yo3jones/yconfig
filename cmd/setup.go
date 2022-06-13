@@ -15,11 +15,12 @@ var (
 )
 
 var setupCmd = &cobra.Command{
-	Use:   "setup [Name]",
+	Use:   "setup [name]",
 	Short: "execute setup steps",
 	Long:  "execute setup steps",
-	Run: func(_ *cobra.Command, _ []string) {
-		run()
+	Args:  cobra.ArbitraryArgs,
+	Run: func(_ *cobra.Command, entryNames []string) {
+		run(entryNames)
 	},
 }
 
@@ -32,7 +33,7 @@ func init() {
 	rootCmd.AddCommand(setupCmd)
 }
 
-func run() {
+func run(entryNames []string) {
 	var setupErr error
 
 	program := tea.NewProgram(setup.InitModel())
@@ -49,6 +50,7 @@ func run() {
 			PackageManagersConfig(&packageManagersConfig).
 			Config(&config).
 			Tags(tags).
+			EntryNames(entryNames).
 			Delay(delay).
 			OnProgress(func(progress []*setup.Progress) {
 				program.Send(progress)
