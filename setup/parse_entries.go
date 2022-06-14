@@ -6,6 +6,7 @@ import (
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
 	"github.com/yo3jones/yconfig/parse"
+	"github.com/yo3jones/yconfig/set"
 )
 
 func parseEntries(config *[]any) ([]*Entry, error) {
@@ -45,8 +46,8 @@ func parseEntry(config *any) (*Entry, error) {
 		entryType    Type
 		os           ostypes.Os
 		arch         archtypes.Arch
-		tags         map[string]bool
-		requiredTags map[string]bool
+		tags         *set.Set[string]
+		requiredTags *set.Set[string]
 	)
 
 	if name, exists, err = parse.Get[string](configMap, "name"); err != nil {

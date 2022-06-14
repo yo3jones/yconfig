@@ -6,6 +6,7 @@ import (
 
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
+	"github.com/yo3jones/yconfig/set"
 )
 
 func Cast[T any](obj *any) (*T, error) {
@@ -124,11 +125,11 @@ func ArchGet(
 func TagsGet(
 	obj *map[string]any,
 	key string,
-) (tags, requiredTags map[string]bool, exists bool, err error) {
+) (tags, requiredTags *set.Set[string], exists bool, err error) {
 	var rawTags []string
 
-	tags = map[string]bool{}
-	requiredTags = map[string]bool{}
+	tags = set.New[string]()
+	requiredTags = set.New[string]()
 
 	if rawTags, exists, err = StringSliceGet(obj, key); err != nil {
 		return nil, nil, exists, err
@@ -139,10 +140,10 @@ func TagsGet(
 	for _, tag := range rawTags {
 		if strings.HasSuffix(tag, "!") {
 			normalizedTag := tag[:len(tag)-1]
-			requiredTags[normalizedTag] = true
-			tags[normalizedTag] = true
+			requiredTags.Put(normalizedTag)
+			tags.Put(normalizedTag)
 		} else {
-			tags[tag] = true
+			tags.Put(tag)
 		}
 	}
 
