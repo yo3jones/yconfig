@@ -75,6 +75,7 @@ func (m *ValueModel) View() string {
 
 	out := m.progress.Out
 	outLen := len(out)
+	// TODO trim all trailing whitespace
 	if outLen > 0 && out[outLen-1] == '\n' {
 		out = out[:outLen-1]
 	}
@@ -131,5 +132,5 @@ func getLineCount(out []byte) int {
 			count++
 		}
 	}
-	return count
+	return count + 1
 }
