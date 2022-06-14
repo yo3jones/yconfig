@@ -17,6 +17,10 @@ func (c *TemplateContext) ForTag(tag string) bool {
 	return exists
 }
 
+func (c *TemplateContext) NotForTag(tag string) bool {
+	return !c.ForTag(tag)
+}
+
 func generateTemplate(
 	templateName, destinationName string,
 	tags map[string]bool,
