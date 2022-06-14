@@ -30,58 +30,78 @@ func parseEntries(config *[]any) ([]*Entry, error) {
 }
 
 func parseEntry(config *any) (*Entry, error) {
-	var (
-		configMap *map[string]any
-		values    []Value
-		err       error
-	)
-
-	if configMap, err = parse.Cast[map[string]any](config); err != nil {
-		return nil, err
+	switch config := (*config).(type) {
+	case string:
+		return parseEntryString(config)
+	case map[string]any:
+		return parseEntryMap(&config)
+	default:
+		return nil,
+			fmt.Errorf(
+				"setup entries must be of type string or map[string]any got %T",
+				config,
+			)
 	}
+}
 
+func parseEntryString(entryString string) (entry *Entry, err error) {
+	t := TypePackage
+
+	return &Entry{
+		Name:         entryString,
+		Type:         &t,
+		Tags:         set.New[string](),
+		RequiredTags: set.New[string](),
+		Values: []Value{&PackageValue{
+			Name:         entryString,
+			Tags:         set.New[string](),
+			RequiredTags: set.New[string](),
+			Packages:     []string{entryString},
+		}},
+	}, nil
+}
+
+func parseEntryMap(config *map[string]any) (entry *Entry, err error) {
 	var (
-		exists       bool
-		name         *string
-		entryType    Type
-		os           ostypes.Os
-		arch         archtypes.Arch
-		tags         *set.Set[string]
-		requiredTags *set.Set[string]
+		exists bool
+		name   *string
+		cf     *commonFields
+		values []Value
 	)
 
-	if name, exists, err = parse.Get[string](configMap, "name"); err != nil {
+	entry = &Entry{}
+
+	if name, exists, err = parse.Get[string](config, "name"); err != nil {
 		return nil, err
 	} else if !exists {
 		return nil, fmt.Errorf("setup entry missing required field %s", "name")
+	} else {
+		entry.Name = *name
 	}
 
-	if entryType, _, err = typeGet(configMap, "type"); err != nil {
+	if cf, err = parseCommonFields(config); err != nil {
 		return nil, err
 	}
 
-	if os, _, err = parse.OsGet(configMap, "os"); err != nil {
-		return nil, err
+	entry.Type = cf.t
+
+	if cf.os == nil {
+		entry.Os = ostypes.Any
+	} else {
+		entry.Os = *cf.os
 	}
 
-	if arch, _, err = parse.ArchGet(configMap, "arch"); err != nil {
-		return nil, err
+	if cf.arch == nil {
+		entry.Arch = archtypes.Any
+	} else {
+		entry.Arch = *cf.arch
 	}
 
-	if tags, requiredTags, _, err = parse.TagsGet(configMap, "tags"); err != nil {
-		return nil, err
-	}
+	entry.Tags = cf.tags
 
-	entry := &Entry{
-		Name:         *name,
-		Type:         entryType,
-		Os:           os,
-		Arch:         arch,
-		Tags:         tags,
-		RequiredTags: requiredTags,
-	}
+	entry.RequiredTags = cf.requiredTags
 
-	if values, err = parseValues(configMap, entry); err != nil {
+	if values, err = parseValues(config, entry); err != nil {
 		return nil, err
 	}
 

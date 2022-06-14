@@ -106,7 +106,7 @@ type Setup struct {
 
 type Entry struct {
 	Name         string
-	Type         Type
+	Type         *Type
 	Os           ostypes.Os
 	Arch         archtypes.Arch
 	Tags         *set.Set[string]

@@ -88,38 +88,74 @@ func OsGet(
 	obj *map[string]any,
 	key string,
 ) (os ostypes.Os, exists bool, err error) {
-	var str *string
+	var osPtr *ostypes.Os
 
-	if str, exists, err = Get[string](obj, key); err != nil {
-		return os, exists, err
+	if osPtr, exists, err = OsPtrGet(obj, key); err != nil {
+		return os, false, err
 	} else if !exists {
 		return os, false, nil
+	} else {
+		return *osPtr, true, nil
+	}
+}
+
+func OsPtrGet(
+	obj *map[string]any,
+	key string,
+) (osPtr *ostypes.Os, exists bool, err error) {
+	var (
+		str *string
+		os  ostypes.Os
+	)
+
+	if str, exists, err = Get[string](obj, key); err != nil {
+		return nil, exists, err
+	} else if !exists {
+		return nil, false, nil
 	}
 
 	if os, err = ostypes.OsFromString(*str); err != nil {
-		return os, true, err
+		return nil, true, err
 	}
 
-	return os, true, err
+	return &os, true, err
 }
 
 func ArchGet(
 	obj *map[string]any,
 	key string,
 ) (arch archtypes.Arch, exists bool, err error) {
-	var str *string
+	var archPtr *archtypes.Arch
 
-	if str, exists, err = Get[string](obj, key); err != nil {
-		return arch, exists, err
+	if archPtr, exists, err = ArchPtrGet(obj, key); err != nil {
+		return arch, false, err
 	} else if !exists {
 		return arch, false, nil
+	} else {
+		return *archPtr, true, nil
+	}
+}
+
+func ArchPtrGet(
+	obj *map[string]any,
+	key string,
+) (archPtr *archtypes.Arch, exists bool, err error) {
+	var (
+		str  *string
+		arch archtypes.Arch
+	)
+
+	if str, exists, err = Get[string](obj, key); err != nil {
+		return nil, false, err
+	} else if !exists {
+		return nil, false, nil
 	}
 
 	if arch, err = archtypes.ArchFromString(*str); err != nil {
-		return arch, true, err
+		return nil, true, err
 	}
 
-	return arch, true, err
+	return &arch, true, err
 }
 
 func TagsGet(

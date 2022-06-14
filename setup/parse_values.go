@@ -3,19 +3,8 @@ package setup
 import (
 	"fmt"
 
-	"github.com/yo3jones/yconfig/archtypes"
-	"github.com/yo3jones/yconfig/ostypes"
 	"github.com/yo3jones/yconfig/parse"
-	"github.com/yo3jones/yconfig/set"
 )
-
-type valueFields struct {
-	t            Type
-	os           ostypes.Os
-	arch         archtypes.Arch
-	tags         *set.Set[string]
-	requiredTags *set.Set[string]
-}
 
 func parseValues(
 	entriesConfig *map[string]any,
@@ -33,7 +22,7 @@ func parseValues(
 		return parseFromValues(config, entry)
 	}
 
-	inferedType = inferType(entriesConfig, entry)
+	inferedType = inferType(entriesConfig, entry.Type)
 
 	switch inferedType {
 	case TypePackage:
@@ -49,28 +38,6 @@ func parseValues(
 			"cannot infer type from setup entry %s",
 			entry.Name,
 		)
-}
-
-func inferType(config *map[string]any, entry *Entry) (t Type) {
-	var exists bool
-
-	if entry.Type != TypeUnknown {
-		return entry.Type
-	}
-
-	if _, exists = (*config)["packages"]; exists {
-		return TypePackage
-	}
-
-	if _, exists = (*config)["script"]; exists {
-		return TypeScript
-	}
-
-	if _, exists = (*config)["cmd"]; exists {
-		return TypeCommand
-	}
-
-	return t
 }
 
 func parseFromValues(config *any, entry *Entry) (values []Value, err error) {
@@ -100,24 +67,42 @@ func parseFromValues(config *any, entry *Entry) (values []Value, err error) {
 func parseValue(config *any, entry *Entry) (value Value, err error) {
 	var (
 		configMap *map[string]any
-		vf        *valueFields
+		cf        *commonFields
 	)
 
 	if configMap, err = parse.Cast[map[string]any](config); err != nil {
 		return nil, err
 	}
 
-	if vf, err = parseValueFields(configMap, entry); err != nil {
+	if cf, err = parseCommonFields(configMap); err != nil {
 		return nil, err
 	}
 
-	switch vf.t {
+	if cf.t == nil {
+		cf.t = entry.Type
+	}
+	inferedType := inferType(configMap, cf.t)
+	cf.t = &inferedType
+
+	if cf.os == nil {
+		cf.os = &entry.Os
+	}
+
+	if cf.arch == nil {
+		cf.arch = &entry.Arch
+	}
+
+	cf.tags.PutAll(entry.Tags.Iter()...)
+
+	cf.requiredTags.PutAll(entry.RequiredTags.Iter()...)
+
+	switch *cf.t {
 	case TypePackage:
-		value, err = parsePackageValue(configMap, vf, entry)
+		value, err = parsePackageValue(configMap, cf, entry)
 	case TypeScript:
-		value, err = parseScriptValue(configMap, vf, entry)
+		value, err = parseScriptValue(configMap, cf, entry)
 	case TypeCommand:
-		value, err = parseCommandValue(configMap, vf, entry)
+		value, err = parseCommandValue(configMap, cf, entry)
 	}
 
 	if err != nil {
@@ -127,59 +112,26 @@ func parseValue(config *any, entry *Entry) (value Value, err error) {
 	return value, nil
 }
 
-func parseValueFields(
-	config *map[string]any,
-	entry *Entry,
-) (vf *valueFields, err error) {
-	var (
-		exists       bool
-		t            Type
-		os           ostypes.Os
-		arch         archtypes.Arch
-		tags         *set.Set[string]
-		requiredTags *set.Set[string]
-	)
+func inferType(config *map[string]any, inType *Type) (t Type) {
+	var exists bool
 
-	if t, exists, err = typeGet(config, "type"); err != nil {
-		return nil, err
-	} else if !exists && entry.Type != TypeUnknown {
-		t = entry.Type
-	} else if !exists {
-		return nil,
-			fmt.Errorf(
-				"setup entry with name %s does not have required field type",
-				entry.Name,
-			)
+	if inType != nil {
+		return *inType
 	}
 
-	if os, exists, err = parse.OsGet(config, "os"); err != nil {
-		return nil, err
-	} else if !exists {
-		os = entry.Os
+	if _, exists = (*config)["packages"]; exists {
+		return TypePackage
 	}
 
-	if arch, exists, err = parse.ArchGet(config, "arch"); err != nil {
-		return nil, err
-	} else if !exists {
-		arch = entry.Arch
+	if _, exists = (*config)["script"]; exists {
+		return TypeScript
 	}
 
-	if tags, requiredTags, _, err = parse.TagsGet(config, "tags"); err != nil {
-		return nil, err
+	if _, exists = (*config)["cmd"]; exists {
+		return TypeCommand
 	}
 
-	tags.PutAll(entry.Tags.Iter()...)
-	requiredTags.PutAll(entry.RequiredTags.Iter()...)
-
-	vf = &valueFields{
-		t:            t,
-		os:           os,
-		arch:         arch,
-		tags:         tags,
-		requiredTags: requiredTags,
-	}
-
-	return vf, nil
+	return t
 }
 
 func parsePackageValueEntryMap(
@@ -203,15 +155,15 @@ func parsePackageValueEntryMap(
 
 func parsePackageValue(
 	config *map[string]any,
-	vf *valueFields,
+	cf *commonFields,
 	entry *Entry,
 ) (value *PackageValue, err error) {
 	value = &PackageValue{
 		Name:         entry.Name,
-		Os:           vf.os,
-		Arch:         vf.arch,
-		Tags:         vf.tags,
-		RequiredTags: vf.requiredTags,
+		Os:           *cf.os,
+		Arch:         *cf.arch,
+		Tags:         cf.tags,
+		RequiredTags: cf.requiredTags,
 	}
 
 	if err = parsePackageSpecifics(config, value, entry); err != nil {
@@ -266,15 +218,15 @@ func parseScriptValueEntryMap(
 
 func parseScriptValue(
 	config *map[string]any,
-	vf *valueFields,
+	cf *commonFields,
 	entry *Entry,
 ) (value *ScriptValue, err error) {
 	value = &ScriptValue{
 		Name:         entry.Name,
-		Os:           vf.os,
-		Arch:         vf.arch,
-		Tags:         vf.tags,
-		RequiredTags: vf.requiredTags,
+		Os:           *cf.os,
+		Arch:         *cf.arch,
+		Tags:         cf.tags,
+		RequiredTags: cf.requiredTags,
 	}
 
 	if err = parseScriptValueSpecifics(config, value, entry); err != nil {
@@ -329,15 +281,15 @@ func parseCommandValueEntryMap(
 
 func parseCommandValue(
 	config *map[string]any,
-	vf *valueFields,
+	cf *commonFields,
 	entry *Entry,
 ) (value *CommandValue, err error) {
 	value = &CommandValue{
 		Name:         entry.Name,
-		Os:           vf.os,
-		Arch:         vf.arch,
-		Tags:         vf.tags,
-		RequiredTags: vf.requiredTags,
+		Os:           *cf.os,
+		Arch:         *cf.arch,
+		Tags:         cf.tags,
+		RequiredTags: cf.requiredTags,
 	}
 
 	if err = parseCommandValueSpecifics(config, value, entry); err != nil {
