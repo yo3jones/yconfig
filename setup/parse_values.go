@@ -6,14 +6,15 @@ import (
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
 	"github.com/yo3jones/yconfig/parse"
+	"github.com/yo3jones/yconfig/set"
 )
 
 type valueFields struct {
 	t            Type
 	os           ostypes.Os
 	arch         archtypes.Arch
-	tags         map[string]bool
-	requiredTags map[string]bool
+	tags         *set.Set[string]
+	requiredTags *set.Set[string]
 }
 
 func parseValues(
@@ -135,8 +136,8 @@ func parseValueFields(
 		t            Type
 		os           ostypes.Os
 		arch         archtypes.Arch
-		tags         map[string]bool
-		requiredTags map[string]bool
+		tags         *set.Set[string]
+		requiredTags *set.Set[string]
 	)
 
 	if t, exists, err = typeGet(config, "type"); err != nil {
@@ -167,13 +168,8 @@ func parseValueFields(
 		return nil, err
 	}
 
-	for tag := range entry.Tags {
-		tags[tag] = true
-	}
-
-	for tag := range entry.RequiredTags {
-		requiredTags[tag] = true
-	}
+	tags.PutAll(entry.Tags.Iter()...)
+	requiredTags.PutAll(entry.RequiredTags.Iter()...)
 
 	vf = &valueFields{
 		t:            t,

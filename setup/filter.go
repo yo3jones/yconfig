@@ -6,6 +6,7 @@ import (
 
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
+	"github.com/yo3jones/yconfig/set"
 )
 
 type Filterable interface {
@@ -15,8 +16,8 @@ type Filterable interface {
 }
 
 type Filterer interface {
-	Tags(tags map[string]bool) Filterer
-	EntryNames(entryNames map[string]bool) Filterer
+	Tags(tags *set.Set[string]) Filterer
+	EntryNames(entryNames *set.Set[string]) Filterer
 	FilterSystemScripts(scripts []*Script) (systemScript *Script, err error)
 	FilterSystemPackageManagers(
 		packageManagers []*PackageManager,
@@ -27,8 +28,8 @@ type Filterer interface {
 type filterer struct {
 	runtimeOs         ostypes.Os
 	runtimeArch       archtypes.Arch
-	runtimeTags       map[string]bool
-	runtimeEntryNames map[string]bool
+	runtimeTags       *set.Set[string]
+	runtimeEntryNames *set.Set[string]
 	initialized       bool
 }
 
@@ -41,13 +42,13 @@ func NewFilterer() Filterer {
 	return &filterer{initialized: false}
 }
 
-func (f *filterer) Tags(tags map[string]bool) Filterer {
+func (f *filterer) Tags(tags *set.Set[string]) Filterer {
 	f.runtimeTags = tags
 	f.initialized = false
 	return f
 }
 
-func (f *filterer) EntryNames(entryNames map[string]bool) Filterer {
+func (f *filterer) EntryNames(entryNames *set.Set[string]) Filterer {
 	f.runtimeEntryNames = entryNames
 	return f
 }
@@ -85,9 +86,9 @@ func (f *filterer) FilterSystemPackageManagers(
 func (f *filterer) FilterValues(setup *Setup) (values []Value, err error) {
 	values = make([]Value, 0, len(setup.Entries))
 
-	hasEntryNames := len(f.runtimeEntryNames) > 0
+	hasEntryNames := f.runtimeEntryNames.Len() > 0
 	for _, entry := range setup.Entries {
-		if exists := f.runtimeEntryNames[entry.Name]; hasEntryNames && !exists {
+		if hasEntryNames && !f.runtimeEntryNames.Contains(entry.Name) {
 			continue
 		}
 
@@ -190,7 +191,7 @@ func shouldKeep[T Filterable](
 
 	keepCompatible = !restrictive
 	keepTag = !hasRuntimeTags || (hasTags && tagMatch)
-	keepRequiredTag = hasRequiredTags && requiredTagMatch
+	keepRequiredTag = hasRequiredTags && requiredTagMatch && keepTag
 
 	return keepCompatible, keepTag, keepRequiredTag
 }
@@ -206,12 +207,19 @@ func getMatches[T Filterable](
 	requiredTagMatch,
 	hasRuntimeTags bool,
 ) {
-	return isCompatible(f, item),
-		len(item.GetTags()) > 0,
-		isTagMatch(f, item),
-		len(item.GetRequiredTags()) > 0,
-		isRequiredTagMatch(f, item),
-		len(f.runtimeTags) > 0
+	compatible = isCompatible(f, item)
+	hasTags = item.GetTags().Len() > 0
+	tagMatch = isTagMatch(f, item)
+	hasRequiredTags = item.GetRequiredTags().Len() > 0
+	requiredTagMatch = isRequiredTagMatch(f, item)
+	hasRuntimeTags = f.runtimeTags.Len() > 0
+
+	return compatible,
+		hasTags,
+		tagMatch,
+		hasRequiredTags,
+		requiredTagMatch,
+		hasRuntimeTags
 }
 
 func isCompatible[T Filterable](f *filterer, item T) bool {
@@ -227,27 +235,9 @@ func isCompatible[T Filterable](f *filterer, item T) bool {
 }
 
 func isTagMatch[T Filterable](f *filterer, item T) bool {
-	return containsAtLeastOneTag(f.runtimeTags, item.GetTags())
+	return f.runtimeTags.ContainedIn(item.GetTags())
 }
 
 func isRequiredTagMatch[T Filterable](f *filterer, item T) bool {
-	return containsAllTags(f.runtimeTags, item.GetRequiredTags())
-}
-
-func containsAtLeastOneTag(runtimeTags, tags map[string]bool) bool {
-	for runtimeTag := range runtimeTags {
-		if _, exists := tags[runtimeTag]; exists {
-			return true
-		}
-	}
-	return false
-}
-
-func containsAllTags(runtimeTags, tags map[string]bool) bool {
-	for tag := range tags {
-		if _, exists := runtimeTags[tag]; !exists {
-			return false
-		}
-	}
-	return true
+	return item.GetRequiredTags().ContainedIn(f.runtimeTags)
 }

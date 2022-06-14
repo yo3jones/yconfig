@@ -7,6 +7,7 @@ import (
 
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
+	"github.com/yo3jones/yconfig/set"
 )
 
 type System interface {
@@ -15,8 +16,8 @@ type System interface {
 }
 
 type Tagger interface {
-	GetTags() map[string]bool
-	GetRequiredTags() map[string]bool
+	GetTags() *set.Set[string]
+	GetRequiredTags() *set.Set[string]
 }
 
 type Oser interface {
@@ -30,8 +31,8 @@ type Archer interface {
 type PackageManager struct {
 	Os           ostypes.Os
 	Arch         archtypes.Arch
-	Tags         map[string]bool
-	RequiredTags map[string]bool
+	Tags         *set.Set[string]
+	RequiredTags *set.Set[string]
 	Script       string
 }
 
@@ -43,11 +44,11 @@ func (pm *PackageManager) GetArch() archtypes.Arch {
 	return pm.Arch
 }
 
-func (pm *PackageManager) GetTags() map[string]bool {
+func (pm *PackageManager) GetTags() *set.Set[string] {
 	return pm.Tags
 }
 
-func (pm *PackageManager) GetRequiredTags() map[string]bool {
+func (pm *PackageManager) GetRequiredTags() *set.Set[string] {
 	return pm.RequiredTags
 }
 
@@ -67,8 +68,8 @@ func (pm *PackageManager) BuildCommand(
 type Script struct {
 	Os           ostypes.Os
 	Arch         archtypes.Arch
-	Tags         map[string]bool
-	RequiredTags map[string]bool
+	Tags         *set.Set[string]
+	RequiredTags *set.Set[string]
 	Cmd          string
 	Args         []string
 }
@@ -81,11 +82,11 @@ func (s *Script) GetArch() archtypes.Arch {
 	return s.Arch
 }
 
-func (s *Script) GetTags() map[string]bool {
+func (s *Script) GetTags() *set.Set[string] {
 	return s.Tags
 }
 
-func (s *Script) GetRequiredTags() map[string]bool {
+func (s *Script) GetRequiredTags() *set.Set[string] {
 	return s.RequiredTags
 }
 
@@ -108,8 +109,8 @@ type Entry struct {
 	Type         Type
 	Os           ostypes.Os
 	Arch         archtypes.Arch
-	Tags         map[string]bool
-	RequiredTags map[string]bool
+	Tags         *set.Set[string]
+	RequiredTags *set.Set[string]
 	Values       []Value
 }
 
@@ -127,8 +128,8 @@ type PackageValue struct {
 	Name         string
 	Os           ostypes.Os
 	Arch         archtypes.Arch
-	Tags         map[string]bool
-	RequiredTags map[string]bool
+	Tags         *set.Set[string]
+	RequiredTags *set.Set[string]
 
 	Packages []string
 }
@@ -149,11 +150,11 @@ func (v *PackageValue) GetArch() archtypes.Arch {
 	return v.Arch
 }
 
-func (v *PackageValue) GetTags() map[string]bool {
+func (v *PackageValue) GetTags() *set.Set[string] {
 	return v.Tags
 }
 
-func (v *PackageValue) GetRequiredTags() map[string]bool {
+func (v *PackageValue) GetRequiredTags() *set.Set[string] {
 	return v.RequiredTags
 }
 
@@ -166,8 +167,8 @@ type ScriptValue struct {
 	Name         string
 	Os           ostypes.Os
 	Arch         archtypes.Arch
-	Tags         map[string]bool
-	RequiredTags map[string]bool
+	Tags         *set.Set[string]
+	RequiredTags *set.Set[string]
 
 	Script string
 }
@@ -188,11 +189,11 @@ func (v *ScriptValue) GetArch() archtypes.Arch {
 	return v.Arch
 }
 
-func (v *ScriptValue) GetTags() map[string]bool {
+func (v *ScriptValue) GetTags() *set.Set[string] {
 	return v.Tags
 }
 
-func (v *ScriptValue) GetRequiredTags() map[string]bool {
+func (v *ScriptValue) GetRequiredTags() *set.Set[string] {
 	return v.RequiredTags
 }
 
@@ -204,8 +205,8 @@ type CommandValue struct {
 	Name         string
 	Os           ostypes.Os
 	Arch         archtypes.Arch
-	Tags         map[string]bool
-	RequiredTags map[string]bool
+	Tags         *set.Set[string]
+	RequiredTags *set.Set[string]
 
 	Cmd  string
 	Args []string
@@ -227,11 +228,11 @@ func (v *CommandValue) GetArch() archtypes.Arch {
 	return v.Arch
 }
 
-func (v *CommandValue) GetTags() map[string]bool {
+func (v *CommandValue) GetTags() *set.Set[string] {
 	return v.Tags
 }
 
-func (v *CommandValue) GetRequiredTags() map[string]bool {
+func (v *CommandValue) GetRequiredTags() *set.Set[string] {
 	return v.RequiredTags
 }
 

@@ -3,6 +3,8 @@ package setup
 import (
 	"fmt"
 	"time"
+
+	"github.com/yo3jones/yconfig/set"
 )
 
 type Setuper interface {
@@ -20,8 +22,8 @@ type setuper struct {
 	scriptsConfig         *any
 	packageManagersConfig *any
 	config                *any
-	tags                  map[string]bool
-	entryNames            map[string]bool
+	tags                  *set.Set[string]
+	entryNames            *set.Set[string]
 	delay                 int
 	onProgress            func(progress []*Progress)
 	scripts               []*Script
@@ -96,19 +98,12 @@ func (s *setuper) Config(config *any) Setuper {
 }
 
 func (s *setuper) Tags(tags []string) Setuper {
-	tagsSet := make(map[string]bool, len(tags))
-	for _, tag := range tags {
-		tagsSet[tag] = true
-	}
-	s.tags = tagsSet
+	s.tags = set.New(tags...)
 	return s
 }
 
 func (s *setuper) EntryNames(entryNames []string) Setuper {
-	s.entryNames = make(map[string]bool, len(entryNames))
-	for _, entryName := range entryNames {
-		s.entryNames[entryName] = true
-	}
+	s.entryNames = set.New(entryNames...)
 	return s
 }
 

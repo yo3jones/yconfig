@@ -6,6 +6,7 @@ import (
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
 	"github.com/yo3jones/yconfig/parse"
+	"github.com/yo3jones/yconfig/set"
 )
 
 func ParsePackageManagers(config *any) (pms []*PackageManager, err error) {
@@ -50,8 +51,8 @@ func parsePackageManager(
 		exists       bool
 		os           ostypes.Os
 		arch         archtypes.Arch
-		tags         map[string]bool
-		requiredTags map[string]bool
+		tags         *set.Set[string]
+		requiredTags *set.Set[string]
 		script       *string
 	)
 

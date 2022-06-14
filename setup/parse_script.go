@@ -6,6 +6,7 @@ import (
 	"github.com/yo3jones/yconfig/archtypes"
 	"github.com/yo3jones/yconfig/ostypes"
 	"github.com/yo3jones/yconfig/parse"
+	"github.com/yo3jones/yconfig/set"
 )
 
 func ParseScripts(config *any) (scripts []*Script, err error) {
@@ -46,8 +47,8 @@ func parseScript(config map[string]any) (script *Script, err error) {
 		exists       bool
 		os           ostypes.Os
 		arch         archtypes.Arch
-		tags         map[string]bool
-		requiredTags map[string]bool
+		tags         *set.Set[string]
+		requiredTags *set.Set[string]
 		cmd          *string
 		args         []string
 	)
