@@ -28,17 +28,35 @@ func typeGet(
 	obj *map[string]any,
 	key string,
 ) (t Type, exists bool, err error) {
-	var str *string
+	var typePtr *Type
 
-	if str, exists, err = parse.Get[string](obj, key); err != nil {
+	if typePtr, exists, err = typePtrGet(obj, key); err != nil {
 		return t, exists, err
 	} else if !exists {
 		return t, false, nil
+	} else {
+		return *typePtr, true, nil
+	}
+}
+
+func typePtrGet(
+	obj *map[string]any,
+	key string,
+) (typePtr *Type, exists bool, err error) {
+	var (
+		str *string
+		t   Type
+	)
+
+	if str, exists, err = parse.Get[string](obj, key); err != nil {
+		return nil, exists, err
+	} else if !exists {
+		return nil, false, nil
 	}
 
 	if t, err = TypeFromString(*str); err != nil {
-		return t, true, err
+		return nil, true, err
 	}
 
-	return t, true, err
+	return &t, true, err
 }
