@@ -92,13 +92,21 @@ func parseValue(config *any, entry *Entry) (value Value, err error) {
 		cf.arch = &entry.Arch
 	}
 
+	cf.tags.PutAll(entry.Tags.Iter()...)
+
+	cf.requiredTags.PutAll(entry.RequiredTags.Iter()...)
+
 	if cf.continueOnError == nil {
 		cf.continueOnError = &entry.ContinueOnError
 	}
 
-	cf.tags.PutAll(entry.Tags.Iter()...)
+	if cf.retryCount == nil {
+		cf.retryCount = &entry.RetryCount
+	}
 
-	cf.requiredTags.PutAll(entry.RequiredTags.Iter()...)
+	if cf.retryBehavior == nil {
+		cf.retryBehavior = &entry.RetryBehavior
+	}
 
 	switch *cf.t {
 	case TypePackage:
@@ -143,11 +151,14 @@ func parsePackageValueEntryMap(
 	entry *Entry,
 ) (values []Value, err error) {
 	value := &PackageValue{
-		Name:         entry.Name,
-		Os:           entry.Os,
-		Arch:         entry.Arch,
-		Tags:         entry.Tags,
-		RequiredTags: entry.RequiredTags,
+		Name:            entry.Name,
+		Os:              entry.Os,
+		Arch:            entry.Arch,
+		Tags:            entry.Tags,
+		RequiredTags:    entry.RequiredTags,
+		ContinueOnError: entry.ContinueOnError,
+		RetryCount:      entry.RetryCount,
+		RetryBehavior:   entry.RetryBehavior,
 	}
 
 	if err = parsePackageSpecifics(config, value, entry); err != nil {
@@ -169,6 +180,8 @@ func parsePackageValue(
 		Tags:            cf.tags,
 		RequiredTags:    cf.requiredTags,
 		ContinueOnError: *cf.continueOnError,
+		RetryCount:      *cf.retryCount,
+		RetryBehavior:   *cf.retryBehavior,
 	}
 
 	if err = parsePackageSpecifics(config, value, entry); err != nil {
@@ -213,6 +226,8 @@ func parseScriptValueEntryMap(
 		Tags:            entry.Tags,
 		RequiredTags:    entry.RequiredTags,
 		ContinueOnError: entry.ContinueOnError,
+		RetryCount:      entry.RetryCount,
+		RetryBehavior:   entry.RetryBehavior,
 	}
 
 	if err = parseScriptValueSpecifics(config, value, entry); err != nil {
@@ -234,6 +249,8 @@ func parseScriptValue(
 		Tags:            cf.tags,
 		RequiredTags:    cf.requiredTags,
 		ContinueOnError: *cf.continueOnError,
+		RetryCount:      *cf.retryCount,
+		RetryBehavior:   *cf.retryBehavior,
 	}
 
 	if err = parseScriptValueSpecifics(config, value, entry); err != nil {
@@ -278,6 +295,8 @@ func parseCommandValueEntryMap(
 		Tags:            entry.Tags,
 		RequiredTags:    entry.RequiredTags,
 		ContinueOnError: entry.ContinueOnError,
+		RetryCount:      entry.RetryCount,
+		RetryBehavior:   entry.RetryBehavior,
 	}
 
 	if err = parseCommandValueSpecifics(config, value, entry); err != nil {
@@ -299,6 +318,8 @@ func parseCommandValue(
 		Tags:            cf.tags,
 		RequiredTags:    cf.requiredTags,
 		ContinueOnError: *cf.continueOnError,
+		RetryCount:      *cf.retryCount,
+		RetryBehavior:   *cf.retryBehavior,
 	}
 
 	if err = parseCommandValueSpecifics(config, value, entry); err != nil {

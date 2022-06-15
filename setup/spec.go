@@ -111,8 +111,15 @@ type Entry struct {
 	Arch            archtypes.Arch
 	Tags            *set.Set[string]
 	RequiredTags    *set.Set[string]
+	RetryCount      int
+	RetryBehavior   RetryBehavior
 	ContinueOnError bool
 	Values          []Value
+}
+
+func (rs RetryBehavior) MarshalJSON() ([]byte, error) {
+	str := rs.String()
+	return json.Marshal(&str)
 }
 
 type Value interface {
@@ -122,6 +129,8 @@ type Value interface {
 	Archer
 	Tagger
 	GetContinueOnError() bool
+	GetRetryCount() int
+	GetRetryBehavior() RetryBehavior
 	BuildCommand(system System) (cmd string, args []string)
 	Printer
 }
@@ -133,8 +142,9 @@ type PackageValue struct {
 	Tags            *set.Set[string]
 	RequiredTags    *set.Set[string]
 	ContinueOnError bool
-
-	Packages []string
+	RetryCount      int
+	RetryBehavior   RetryBehavior
+	Packages        []string
 }
 
 func (v *PackageValue) GetName() string {
@@ -165,6 +175,14 @@ func (v *PackageValue) GetContinueOnError() bool {
 	return v.ContinueOnError
 }
 
+func (v *PackageValue) GetRetryCount() int {
+	return v.RetryCount
+}
+
+func (v *PackageValue) GetRetryBehavior() RetryBehavior {
+	return v.RetryBehavior
+}
+
 func (v *PackageValue) BuildCommand(system System) (cmd string, args []string) {
 	return system.PackageManager().
 		BuildCommand(system.Script(), v.Packages)
@@ -177,8 +195,9 @@ type ScriptValue struct {
 	Tags            *set.Set[string]
 	RequiredTags    *set.Set[string]
 	ContinueOnError bool
-
-	Script string
+	RetryCount      int
+	RetryBehavior   RetryBehavior
+	Script          string
 }
 
 func (v *ScriptValue) GetName() string {
@@ -209,6 +228,14 @@ func (v *ScriptValue) GetContinueOnError() bool {
 	return v.ContinueOnError
 }
 
+func (v *ScriptValue) GetRetryCount() int {
+	return v.RetryCount
+}
+
+func (v *ScriptValue) GetRetryBehavior() RetryBehavior {
+	return v.RetryBehavior
+}
+
 func (v *ScriptValue) BuildCommand(system System) (cmd string, args []string) {
 	return system.Script().BuildCommand(v.Script)
 }
@@ -220,9 +247,10 @@ type CommandValue struct {
 	Tags            *set.Set[string]
 	RequiredTags    *set.Set[string]
 	ContinueOnError bool
-
-	Cmd  string
-	Args []string
+	RetryCount      int
+	RetryBehavior   RetryBehavior
+	Cmd             string
+	Args            []string
 }
 
 func (v *CommandValue) GetName() string {
@@ -251,6 +279,14 @@ func (v *CommandValue) GetRequiredTags() *set.Set[string] {
 
 func (v *CommandValue) GetContinueOnError() bool {
 	return v.ContinueOnError
+}
+
+func (v *CommandValue) GetRetryCount() int {
+	return v.RetryCount
+}
+
+func (v *CommandValue) GetRetryBehavior() RetryBehavior {
+	return v.RetryBehavior
 }
 
 func (v *CommandValue) BuildCommand(_ System) (cmd string, args []string) {
@@ -296,6 +332,39 @@ type Printer interface {
 
 func (t Type) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, t)), nil
+}
+
+type RetryBehavior int
+
+const (
+	RetryBehaviorInPlace RetryBehavior = iota
+	RetryBehaviorAtEnd
+)
+
+func (rs RetryBehavior) String() string {
+	switch rs {
+	case RetryBehaviorInPlace:
+		return "IN_PLACE"
+	case RetryBehaviorAtEnd:
+		return "AT_END"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+func RetryBehaviorFromString(str string) (RetryBehavior, error) {
+	switch str {
+	case "IN_PLACE":
+		return RetryBehaviorInPlace, nil
+	case "AT_END":
+		return RetryBehaviorAtEnd, nil
+	default:
+		return RetryBehaviorInPlace,
+			fmt.Errorf(
+				"no retry strategy for string %s",
+				str,
+			)
+	}
 }
 
 func (setup *Setup) Print() {
