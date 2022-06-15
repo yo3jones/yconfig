@@ -92,6 +92,10 @@ func parseValue(config *any, entry *Entry) (value Value, err error) {
 		cf.arch = &entry.Arch
 	}
 
+	if cf.continueOnError == nil {
+		cf.continueOnError = &entry.ContinueOnError
+	}
+
 	cf.tags.PutAll(entry.Tags.Iter()...)
 
 	cf.requiredTags.PutAll(entry.RequiredTags.Iter()...)
@@ -159,11 +163,12 @@ func parsePackageValue(
 	entry *Entry,
 ) (value *PackageValue, err error) {
 	value = &PackageValue{
-		Name:         entry.Name,
-		Os:           *cf.os,
-		Arch:         *cf.arch,
-		Tags:         cf.tags,
-		RequiredTags: cf.requiredTags,
+		Name:            entry.Name,
+		Os:              *cf.os,
+		Arch:            *cf.arch,
+		Tags:            cf.tags,
+		RequiredTags:    cf.requiredTags,
+		ContinueOnError: *cf.continueOnError,
 	}
 
 	if err = parsePackageSpecifics(config, value, entry); err != nil {
@@ -202,11 +207,12 @@ func parseScriptValueEntryMap(
 	entry *Entry,
 ) (values []Value, err error) {
 	value := &ScriptValue{
-		Name:         entry.Name,
-		Os:           entry.Os,
-		Arch:         entry.Arch,
-		Tags:         entry.Tags,
-		RequiredTags: entry.RequiredTags,
+		Name:            entry.Name,
+		Os:              entry.Os,
+		Arch:            entry.Arch,
+		Tags:            entry.Tags,
+		RequiredTags:    entry.RequiredTags,
+		ContinueOnError: entry.ContinueOnError,
 	}
 
 	if err = parseScriptValueSpecifics(config, value, entry); err != nil {
@@ -222,11 +228,12 @@ func parseScriptValue(
 	entry *Entry,
 ) (value *ScriptValue, err error) {
 	value = &ScriptValue{
-		Name:         entry.Name,
-		Os:           *cf.os,
-		Arch:         *cf.arch,
-		Tags:         cf.tags,
-		RequiredTags: cf.requiredTags,
+		Name:            entry.Name,
+		Os:              *cf.os,
+		Arch:            *cf.arch,
+		Tags:            cf.tags,
+		RequiredTags:    cf.requiredTags,
+		ContinueOnError: *cf.continueOnError,
 	}
 
 	if err = parseScriptValueSpecifics(config, value, entry); err != nil {
@@ -265,11 +272,12 @@ func parseCommandValueEntryMap(
 	entry *Entry,
 ) (values []Value, err error) {
 	value := &CommandValue{
-		Name:         entry.Name,
-		Os:           entry.Os,
-		Arch:         entry.Arch,
-		Tags:         entry.Tags,
-		RequiredTags: entry.RequiredTags,
+		Name:            entry.Name,
+		Os:              entry.Os,
+		Arch:            entry.Arch,
+		Tags:            entry.Tags,
+		RequiredTags:    entry.RequiredTags,
+		ContinueOnError: entry.ContinueOnError,
 	}
 
 	if err = parseCommandValueSpecifics(config, value, entry); err != nil {
@@ -285,11 +293,12 @@ func parseCommandValue(
 	entry *Entry,
 ) (value *CommandValue, err error) {
 	value = &CommandValue{
-		Name:         entry.Name,
-		Os:           *cf.os,
-		Arch:         *cf.arch,
-		Tags:         cf.tags,
-		RequiredTags: cf.requiredTags,
+		Name:            entry.Name,
+		Os:              *cf.os,
+		Arch:            *cf.arch,
+		Tags:            cf.tags,
+		RequiredTags:    cf.requiredTags,
+		ContinueOnError: *cf.continueOnError,
 	}
 
 	if err = parseCommandValueSpecifics(config, value, entry); err != nil {

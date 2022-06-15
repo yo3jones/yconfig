@@ -19,8 +19,7 @@ var (
 	statusStyle = lipgloss.NewStyle().
 			PaddingLeft(1).
 			PaddingRight(1).
-			Width(10).
-			Align(lipgloss.Right)
+			Width(10)
 
 	viewportStyle = lipgloss.NewStyle().
 			MarginLeft(5).
@@ -31,6 +30,7 @@ var (
 
 type ValueModel struct {
 	progress       *Progress
+	complete       bool
 	viewport       *viewport.Model
 	viewportHeight int
 }
@@ -67,7 +67,9 @@ func (m *ValueModel) View() string {
 
 	status := m.progress.Status
 
-	if status != StatusRunning && status != StatusError {
+	if !m.complete && status != StatusRunning {
+		return sb.String()
+	} else if m.complete && status != StatusError {
 		return sb.String()
 	}
 
@@ -89,7 +91,12 @@ func (m *ValueModel) View() string {
 	m.viewport.SetContent(string(out))
 	m.viewport.GotoBottom()
 
-	fmt.Fprintf(sb, "%s", viewportStyle.Render(m.viewport.View()))
+	runtimeViewportStyle := viewportStyle
+	if m.progress.Status == StatusError {
+		runtimeViewportStyle = runtimeViewportStyle.Copy().
+			BorderForeground(lipgloss.Color("9"))
+	}
+	fmt.Fprintf(sb, "%s", runtimeViewportStyle.Render(m.viewport.View()))
 
 	return sb.String()
 }

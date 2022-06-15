@@ -105,13 +105,14 @@ type Setup struct {
 }
 
 type Entry struct {
-	Name         string
-	Type         *Type
-	Os           ostypes.Os
-	Arch         archtypes.Arch
-	Tags         *set.Set[string]
-	RequiredTags *set.Set[string]
-	Values       []Value
+	Name            string
+	Type            *Type
+	Os              ostypes.Os
+	Arch            archtypes.Arch
+	Tags            *set.Set[string]
+	RequiredTags    *set.Set[string]
+	ContinueOnError bool
+	Values          []Value
 }
 
 type Value interface {
@@ -120,16 +121,18 @@ type Value interface {
 	Oser
 	Archer
 	Tagger
+	GetContinueOnError() bool
 	BuildCommand(system System) (cmd string, args []string)
 	Printer
 }
 
 type PackageValue struct {
-	Name         string
-	Os           ostypes.Os
-	Arch         archtypes.Arch
-	Tags         *set.Set[string]
-	RequiredTags *set.Set[string]
+	Name            string
+	Os              ostypes.Os
+	Arch            archtypes.Arch
+	Tags            *set.Set[string]
+	RequiredTags    *set.Set[string]
+	ContinueOnError bool
 
 	Packages []string
 }
@@ -158,17 +161,22 @@ func (v *PackageValue) GetRequiredTags() *set.Set[string] {
 	return v.RequiredTags
 }
 
+func (v *PackageValue) GetContinueOnError() bool {
+	return v.ContinueOnError
+}
+
 func (v *PackageValue) BuildCommand(system System) (cmd string, args []string) {
 	return system.PackageManager().
 		BuildCommand(system.Script(), v.Packages)
 }
 
 type ScriptValue struct {
-	Name         string
-	Os           ostypes.Os
-	Arch         archtypes.Arch
-	Tags         *set.Set[string]
-	RequiredTags *set.Set[string]
+	Name            string
+	Os              ostypes.Os
+	Arch            archtypes.Arch
+	Tags            *set.Set[string]
+	RequiredTags    *set.Set[string]
+	ContinueOnError bool
 
 	Script string
 }
@@ -197,16 +205,21 @@ func (v *ScriptValue) GetRequiredTags() *set.Set[string] {
 	return v.RequiredTags
 }
 
+func (v *ScriptValue) GetContinueOnError() bool {
+	return v.ContinueOnError
+}
+
 func (v *ScriptValue) BuildCommand(system System) (cmd string, args []string) {
 	return system.Script().BuildCommand(v.Script)
 }
 
 type CommandValue struct {
-	Name         string
-	Os           ostypes.Os
-	Arch         archtypes.Arch
-	Tags         *set.Set[string]
-	RequiredTags *set.Set[string]
+	Name            string
+	Os              ostypes.Os
+	Arch            archtypes.Arch
+	Tags            *set.Set[string]
+	RequiredTags    *set.Set[string]
+	ContinueOnError bool
 
 	Cmd  string
 	Args []string
@@ -234,6 +247,10 @@ func (v *CommandValue) GetTags() *set.Set[string] {
 
 func (v *CommandValue) GetRequiredTags() *set.Set[string] {
 	return v.RequiredTags
+}
+
+func (v *CommandValue) GetContinueOnError() bool {
+	return v.ContinueOnError
 }
 
 func (v *CommandValue) BuildCommand(_ System) (cmd string, args []string) {
