@@ -8,9 +8,7 @@ import (
 )
 
 type Model struct {
-	progress          []*Progress
-	complete          bool
-	errorCount        int
+	state             *SetupState
 	valueModels       []*ValueModel
 	statusLineHeights int
 	windowHeight      int
@@ -37,8 +35,8 @@ func (m *Model) Init() tea.Cmd {
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case []*Progress:
-		m.progress = msg
+	case *SetupState:
+		m.state = msg
 		m.initialzeValueModels()
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -76,14 +74,14 @@ func (m *Model) initialzeValueModels() {
 	m.updateComplete()
 	m.updateViewport()
 
-	if m.progress == nil || m.valueModels != nil {
+	if m.state == nil || m.valueModels != nil {
 		return
 	}
 
-	valueModels := make([]*ValueModel, len(m.progress))
+	valueModels := make([]*ValueModel, len(m.state.EntryStates))
 	statusLineHeights := 0
-	for i, p := range m.progress {
-		valueModel := InitValueModel(p)
+	for i, entryState := range m.state.EntryStates {
+		valueModel := InitValueModel(entryState)
 		valueModels[i] = valueModel
 		statusLineHeights += valueModel.GetStatusLineHeight()
 	}
@@ -101,12 +99,14 @@ func (m *Model) updateViewport() {
 
 	viewportHeight := m.windowHeight - m.statusLineHeights - 2
 
-	if m.complete {
+	complete := m.state.Status.IsCompleted()
+
+	if complete {
 		viewportHeight -= 2
 	}
 
-	if m.complete && m.errorCount > 1 {
-		viewportHeight = viewportHeight / m.errorCount
+	if complete && m.state.ErroredCount > 1 {
+		viewportHeight = viewportHeight / m.state.ErroredCount
 	}
 
 	if viewportHeight < minViewportHeight {
@@ -121,28 +121,15 @@ func (m *Model) updateViewport() {
 }
 
 func (m *Model) updateComplete() {
-	if m.progress == nil {
+	if m.state == nil {
 		return
 	}
-
-	complete := true
-	errorCount := 0
-	for _, p := range m.progress {
-		if p.Status != StatusComplete && p.Status != StatusError {
-			complete = false
-		}
-		if p.Status == StatusError {
-			errorCount++
-		}
-	}
-	m.complete = complete
-	m.errorCount = errorCount
 
 	if m.valueModels == nil {
 		return
 	}
 
 	for _, valueModel := range m.valueModels {
-		valueModel.complete = complete
+		valueModel.setupComplete = m.state.Status.IsCompleted()
 	}
 }

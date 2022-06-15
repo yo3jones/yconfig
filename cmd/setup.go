@@ -52,8 +52,8 @@ func run(entryNames []string) {
 			Tags(tags).
 			EntryNames(entryNames).
 			Delay(delay).
-			OnProgress(func(progress []*setup.Progress) {
-				program.Send(progress)
+			OnProgress(func(state *setup.SetupState) {
+				program.Send(state)
 			}).
 			Setup()
 		if err != nil {

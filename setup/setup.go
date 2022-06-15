@@ -14,7 +14,7 @@ type Setuper interface {
 	Tags(tags []string) Setuper
 	EntryNames(entryNames []string) Setuper
 	Delay(delay int) Setuper
-	OnProgress(onProgress func(progress []*Progress)) Setuper
+	OnProgress(onProgress func(setupState *SetupState)) Setuper
 	Setup() (err error)
 }
 
@@ -25,14 +25,14 @@ type setuper struct {
 	tags                  *set.Set[string]
 	entryNames            *set.Set[string]
 	delay                 int
-	onProgress            func(progress []*Progress)
+	onProgress            func(setupState *SetupState)
 	scripts               []*Script
 	packageManagers       []*PackageManager
 	setup                 *Setup
 	systemScript          *Script
 	systemPackageManager  *PackageManager
 	values                []Value
-	progress              []*Progress
+	state                 *SetupState
 }
 
 type Status int
@@ -60,11 +60,28 @@ func (s Status) String() string {
 	return "unknown"
 }
 
+func (s Status) IsCompleted() bool {
+	switch s {
+	case StatusComplete:
+		return true
+	case StatusError:
+		return true
+	default:
+		return false
+	}
+}
+
 func (s Status) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s"`, s)), nil
 }
 
-type Progress struct {
+type SetupState struct {
+	Status       Status
+	ErroredCount int
+	EntryStates  []*EntryState
+}
+
+type EntryState struct {
 	Value  Value
 	Status Status
 	Out    []byte
@@ -112,7 +129,7 @@ func (s *setuper) Delay(delay int) Setuper {
 	return s
 }
 
-func (s *setuper) OnProgress(onProgress func(progress []*Progress)) Setuper {
+func (s *setuper) OnProgress(onProgress func(setupState *SetupState)) Setuper {
 	s.onProgress = onProgress
 	return s
 }
@@ -122,7 +139,7 @@ func (s *setuper) Setup() (err error) {
 		return err
 	}
 
-	s.onProgress(s.progress)
+	s.notifyProgress()
 
 	if err = s.execAll(); err != nil {
 		return err
@@ -150,7 +167,7 @@ func (s *setuper) prepare() (err error) {
 	// s.systemPackageManager.Print()
 	// SlicePrint(s.values)
 
-	s.prepareProgress()
+	s.prepareState()
 
 	return nil
 }
@@ -196,25 +213,31 @@ func (s *setuper) filter() (err error) {
 	return nil
 }
 
-func (s *setuper) prepareProgress() {
-	progressSlice := make([]*Progress, len(s.values))
+func (s *setuper) prepareState() {
+	setupState := &SetupState{
+		Status:       StatusWaiting,
+		ErroredCount: 0,
+		EntryStates:  make([]*EntryState, len(s.values)),
+	}
+
 	for i, v := range s.values {
-		progressSlice[i] = &Progress{
+		setupState.EntryStates[i] = &EntryState{
 			Value:  v,
 			Status: StatusWaiting,
 			Out:    []byte{},
 		}
 	}
-	s.progress = progressSlice
+
+	s.state = setupState
 
 	if s.onProgress == nil {
-		s.onProgress = func(_ []*Progress) {}
+		s.onProgress = func(_ *SetupState) {}
 	}
 }
 
 func (s *setuper) execAll() (err error) {
-	for _, progress := range s.progress {
-		if err = s.exec(progress); err != nil {
+	for _, state := range s.state.EntryStates {
+		if err = s.exec(state); err != nil {
 			return err
 		}
 	}
@@ -222,22 +245,20 @@ func (s *setuper) execAll() (err error) {
 	return nil
 }
 
-func (s *setuper) exec(progress *Progress) (err error) {
+func (s *setuper) exec(state *EntryState) (err error) {
 	s.doDelay()
 
-	progress.Status = StatusRunning
-	s.onProgress(s.progress)
+	s.changeStatus(state, StatusRunning)
 
-	cmd, args := progress.Value.BuildCommand(s)
-	writer := NewWriter(&progress.Out, func() {
-		s.onProgress(s.progress)
+	cmd, args := state.Value.BuildCommand(s)
+	writer := NewWriter(&state.Out, func() {
+		s.notifyProgress()
 	})
 
 	if err = Exec(cmd, args, writer); err != nil {
-		progress.Status = StatusError
-		s.onProgress(s.progress)
+		s.changeStatus(state, StatusError)
 
-		if progress.Value.GetContinueOnError() {
+		if state.Value.GetContinueOnError() {
 			return nil
 		} else {
 			return err
@@ -246,8 +267,7 @@ func (s *setuper) exec(progress *Progress) (err error) {
 
 	s.doDelay()
 
-	progress.Status = StatusComplete
-	s.onProgress(s.progress)
+	s.changeStatus(state, StatusComplete)
 
 	return nil
 }
@@ -258,4 +278,53 @@ func (s *setuper) doDelay() {
 	}
 
 	time.Sleep(time.Duration(s.delay) * time.Millisecond)
+}
+
+func (s *setuper) changeStatus(state *EntryState, status Status) {
+	state.Status = status
+
+	s.recalculateState()
+
+	s.notifyProgress()
+}
+
+func (s *setuper) recalculateState() {
+	setupStatus := StatusWaiting
+	erroredCount := 0
+	completedCount := 0
+
+	for _, state := range s.state.EntryStates {
+		switch state.Status {
+		case StatusWaiting:
+		case StatusRunning:
+			setupStatus = StatusRunning
+		case StatusComplete:
+			completedCount++
+		case StatusError:
+			erroredCount++
+
+			if state.Value.GetContinueOnError() {
+				setupStatus = StatusRunning
+				completedCount++
+			} else {
+				setupStatus = StatusError
+				break
+			}
+		}
+	}
+
+	s.state.ErroredCount = erroredCount
+	s.state.Status = setupStatus
+
+	allComplete := completedCount >= len(s.values)
+
+	if allComplete && erroredCount > 0 {
+		s.state.Status = StatusError
+	} else if allComplete && erroredCount <= 0 {
+		s.state.Status = StatusComplete
+	}
+}
+
+func (s *setuper) notifyProgress() {
+	s.onProgress(s.state)
 }
