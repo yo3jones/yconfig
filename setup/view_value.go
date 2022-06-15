@@ -16,6 +16,9 @@ var (
 	statusBracketStyle = lipgloss.NewStyle().
 				Bold(true)
 
+	retryStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("3"))
+
 	statusStyle = lipgloss.NewStyle().
 			PaddingLeft(1).
 			PaddingRight(1).
@@ -25,7 +28,7 @@ var (
 			MarginLeft(5).
 			Border(lipgloss.NormalBorder(), false, false, false, true).
 			PaddingLeft(2).
-			BorderForeground(lipgloss.Color("12"))
+			BorderForeground(lipgloss.Color("4"))
 )
 
 type ValueModel struct {
@@ -94,7 +97,7 @@ func (m *ValueModel) View() string {
 	runtimeViewportStyle := viewportStyle
 	if m.state.Status == StatusError {
 		runtimeViewportStyle = runtimeViewportStyle.Copy().
-			BorderForeground(lipgloss.Color("9"))
+			BorderForeground(lipgloss.Color("1"))
 	}
 	fmt.Fprintf(sb, "%s", runtimeViewportStyle.Render(m.viewport.View()))
 
@@ -103,11 +106,12 @@ func (m *ValueModel) View() string {
 
 func (m *ValueModel) renderStatusLine(sb *strings.Builder) {
 	statusLine := fmt.Sprintf(
-		"%s%s%s %s",
+		"%s%s%s %s %s",
 		statusBracketStyle.Render("["),
-		getStatusStyle(m.state.Status).Render(m.state.Status.String()),
+		m.getStatusStyle().Render(m.state.Status.String()),
 		statusBracketStyle.Render("]"),
 		m.state.Value.GetName(),
+		m.renderRetry(),
 	)
 	fmt.Fprintf(
 		sb,
@@ -116,17 +120,39 @@ func (m *ValueModel) renderStatusLine(sb *strings.Builder) {
 	)
 }
 
-func getStatusStyle(status Status) lipgloss.Style {
+func (m *ValueModel) renderRetry() string {
+	if !m.state.Retrying {
+		return ""
+	}
+
+	return retryStyle.Render(
+		fmt.Sprintf(
+			"( %d of %d )",
+			m.state.Tries,
+			m.state.Value.GetRetryCount()+1,
+		),
+	)
+}
+
+func (m *ValueModel) getStatusStyle() lipgloss.Style {
 	style := statusStyle.Copy()
-	switch status {
+	switch m.state.Status {
 	case StatusWaiting:
-		style.Foreground(lipgloss.Color("13"))
+		if m.state.Retrying {
+			style.Foreground(lipgloss.Color("3"))
+		} else {
+			style.Foreground(lipgloss.Color("5"))
+		}
 	case StatusRunning:
-		style.Foreground(lipgloss.Color("12"))
+		style.Foreground(lipgloss.Color("4"))
 	case StatusComplete:
-		style.Foreground(lipgloss.Color("10"))
+		if m.state.Retrying {
+			style.Foreground(lipgloss.Color("3"))
+		} else {
+			style.Foreground(lipgloss.Color("2"))
+		}
 	case StatusError:
-		style.Foreground(lipgloss.Color("9"))
+		style.Foreground(lipgloss.Color("1"))
 	}
 
 	return style

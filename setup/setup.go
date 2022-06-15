@@ -82,9 +82,11 @@ type SetupState struct {
 }
 
 type EntryState struct {
-	Value  Value
-	Status Status
-	Out    []byte
+	Value    Value
+	Status   Status
+	Tries    int
+	Retrying bool
+	Out      []byte
 }
 
 func New() Setuper {
@@ -236,7 +238,13 @@ func (s *setuper) prepareState() {
 }
 
 func (s *setuper) execAll() (err error) {
-	for _, state := range s.state.EntryStates {
+	for i := 0; !s.state.Status.IsCompleted(); i++ {
+		if i >= len(s.values) {
+			i = 0
+		}
+
+		state := s.state.EntryStates[i]
+
 		if err = s.exec(state); err != nil {
 			return err
 		}
@@ -246,6 +254,10 @@ func (s *setuper) execAll() (err error) {
 }
 
 func (s *setuper) exec(state *EntryState) (err error) {
+	if state.Status.IsCompleted() {
+		return nil
+	}
+
 	s.doDelay()
 
 	s.changeStatus(state, StatusRunning)
@@ -255,14 +267,23 @@ func (s *setuper) exec(state *EntryState) (err error) {
 		s.notifyProgress()
 	})
 
-	if err = Exec(cmd, args, writer); err != nil {
-		s.changeStatus(state, StatusError)
+	err = Exec(cmd, args, writer)
 
-		if state.Value.GetContinueOnError() {
-			return nil
-		} else {
-			return err
-		}
+	state.Tries++
+
+	if err != nil && state.Value.GetRetryCount()+1 > state.Tries {
+		state.Retrying = true
+		s.changeStatus(state, StatusWaiting)
+		return nil
+	}
+
+	if err != nil && state.Value.GetContinueOnError() {
+		s.changeStatus(state, StatusError)
+		return nil
+	}
+
+	if err != nil {
+		return err
 	}
 
 	s.doDelay()
@@ -308,7 +329,6 @@ func (s *setuper) recalculateState() {
 				completedCount++
 			} else {
 				setupStatus = StatusError
-				break
 			}
 		}
 	}

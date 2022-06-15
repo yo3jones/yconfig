@@ -105,6 +105,14 @@ func parseEntryMap(config *map[string]any) (entry *Entry, err error) {
 		entry.ContinueOnError = *cf.continueOnError
 	}
 
+	if cf.retryCount != nil {
+		entry.RetryCount = *cf.retryCount
+	}
+
+	if cf.retryBehavior != nil {
+		entry.RetryBehavior = *cf.retryBehavior
+	}
+
 	if values, err = parseValues(config, entry); err != nil {
 		return nil, err
 	}

@@ -24,21 +24,6 @@ func Parse(config *any) (*Setup, error) {
 	return setup, nil
 }
 
-func typeGet(
-	obj *map[string]any,
-	key string,
-) (t Type, exists bool, err error) {
-	var typePtr *Type
-
-	if typePtr, exists, err = typePtrGet(obj, key); err != nil {
-		return t, exists, err
-	} else if !exists {
-		return t, false, nil
-	} else {
-		return *typePtr, true, nil
-	}
-}
-
 func typePtrGet(
 	obj *map[string]any,
 	key string,
@@ -59,4 +44,26 @@ func typePtrGet(
 	}
 
 	return &t, true, err
+}
+
+func retryBehaviorPtrGet(
+	obj *map[string]any,
+	key string,
+) (retryBehaviorPtr *RetryBehavior, exists bool, err error) {
+	var (
+		str           *string
+		retryBehavior RetryBehavior
+	)
+
+	if str, exists, err = parse.Get[string](obj, key); err != nil {
+		return nil, false, err
+	} else if !exists {
+		return nil, false, nil
+	}
+
+	if retryBehavior, err = RetryBehaviorFromString(*str); err != nil {
+		return nil, true, err
+	}
+
+	return &retryBehavior, true, nil
 }
