@@ -29,15 +29,15 @@ var (
 )
 
 type ValueModel struct {
-	progress       *Progress
-	complete       bool
+	state          *EntryState
+	setupComplete  bool
 	viewport       *viewport.Model
 	viewportHeight int
 }
 
-func InitValueModel(progress *Progress) *ValueModel {
+func InitValueModel(state *EntryState) *ValueModel {
 	return &ValueModel{
-		progress: progress,
+		state:    state,
 		viewport: &viewport.Model{},
 	}
 }
@@ -65,17 +65,17 @@ func (m *ValueModel) View() string {
 
 	m.renderStatusLine(sb)
 
-	status := m.progress.Status
+	status := m.state.Status
 
-	if !m.complete && status != StatusRunning {
+	if !m.setupComplete && status != StatusRunning {
 		return sb.String()
-	} else if m.complete && status != StatusError {
+	} else if m.setupComplete && status != StatusError {
 		return sb.String()
 	}
 
 	fmt.Fprintln(sb)
 
-	out := m.progress.Out
+	out := m.state.Out
 	outLen := len(out)
 	// TODO trim all trailing whitespace
 	if outLen > 0 && out[outLen-1] == '\n' {
@@ -92,7 +92,7 @@ func (m *ValueModel) View() string {
 	m.viewport.GotoBottom()
 
 	runtimeViewportStyle := viewportStyle
-	if m.progress.Status == StatusError {
+	if m.state.Status == StatusError {
 		runtimeViewportStyle = runtimeViewportStyle.Copy().
 			BorderForeground(lipgloss.Color("9"))
 	}
@@ -105,9 +105,9 @@ func (m *ValueModel) renderStatusLine(sb *strings.Builder) {
 	statusLine := fmt.Sprintf(
 		"%s%s%s %s",
 		statusBracketStyle.Render("["),
-		getStatusStyle(m.progress.Status).Render(m.progress.Status.String()),
+		getStatusStyle(m.state.Status).Render(m.state.Status.String()),
 		statusBracketStyle.Render("]"),
-		m.progress.Value.GetName(),
+		m.state.Value.GetName(),
 	)
 	fmt.Fprintf(
 		sb,
