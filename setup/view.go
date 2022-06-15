@@ -9,6 +9,8 @@ import (
 
 type Model struct {
 	progress          []*Progress
+	complete          bool
+	errorCount        int
 	valueModels       []*ValueModel
 	statusLineHeights int
 	windowHeight      int
@@ -20,6 +22,9 @@ type Msg string
 const (
 	MsgDone    Msg = "done"
 	MsgRefresh Msg = "refresh"
+
+	minViewportHeight = 5
+	maxViewportHeight = 200
 )
 
 func InitModel() tea.Model {
@@ -39,7 +44,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.windowHeight = msg.Height
 		m.windowWidth = msg.Width
-		m.initialzeViewport()
+		m.updateViewport()
 		return m, nil
 	case tea.KeyMsg:
 		if msg.Type == tea.KeyCtrlC {
@@ -60,29 +65,17 @@ func (m *Model) View() string {
 
 	sb := &strings.Builder{}
 
-	hasError := false
-	allComplete := true
-	for i, valueModel := range m.valueModels {
-		progress := m.progress[i]
-		if progress.Status == StatusError {
-			hasError = true
-		}
-		if progress.Status != StatusComplete {
-			allComplete = false
-		}
-		if i > 0 {
-			fmt.Fprintln(sb)
-		}
-		fmt.Fprint(sb, valueModel.View())
-	}
-	if hasError || allComplete {
-		fmt.Fprintln(sb)
+	for _, valueModel := range m.valueModels {
+		fmt.Fprintf(sb, "%s\n", valueModel.View())
 	}
 
 	return sb.String()
 }
 
 func (m *Model) initialzeValueModels() {
+	m.updateComplete()
+	m.updateViewport()
+
 	if m.progress == nil || m.valueModels != nil {
 		return
 	}
@@ -97,22 +90,59 @@ func (m *Model) initialzeValueModels() {
 	m.valueModels = valueModels
 	m.statusLineHeights = statusLineHeights
 
-	m.initialzeViewport()
+	m.updateComplete()
+	m.updateViewport()
 }
 
-func (m *Model) initialzeViewport() {
+func (m *Model) updateViewport() {
 	if m.valueModels == nil || m.windowHeight <= 0 {
 		return
 	}
 
-	viewportHeight := m.windowHeight - m.statusLineHeights - 1
-	if viewportHeight < 5 {
-		viewportHeight = 5
-	} else if viewportHeight > 200 {
-		viewportHeight = 200
+	viewportHeight := m.windowHeight - m.statusLineHeights - 2
+
+	if m.complete {
+		viewportHeight -= 2
+	}
+
+	if m.complete && m.errorCount > 1 {
+		viewportHeight = viewportHeight / m.errorCount
+	}
+
+	if viewportHeight < minViewportHeight {
+		viewportHeight = minViewportHeight
+	} else if viewportHeight > maxViewportHeight {
+		viewportHeight = maxViewportHeight
 	}
 
 	for _, valueModel := range m.valueModels {
 		valueModel.SetViewportHeight(viewportHeight)
+	}
+}
+
+func (m *Model) updateComplete() {
+	if m.progress == nil {
+		return
+	}
+
+	complete := true
+	errorCount := 0
+	for _, p := range m.progress {
+		if p.Status != StatusComplete && p.Status != StatusError {
+			complete = false
+		}
+		if p.Status == StatusError {
+			errorCount++
+		}
+	}
+	m.complete = complete
+	m.errorCount = errorCount
+
+	if m.valueModels == nil {
+		return
+	}
+
+	for _, valueModel := range m.valueModels {
+		valueModel.complete = complete
 	}
 }

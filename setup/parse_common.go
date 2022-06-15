@@ -8,11 +8,12 @@ import (
 )
 
 type commonFields struct {
-	t            *Type
-	os           *ostypes.Os
-	arch         *archtypes.Arch
-	tags         *set.Set[string]
-	requiredTags *set.Set[string]
+	t               *Type
+	os              *ostypes.Os
+	arch            *archtypes.Arch
+	tags            *set.Set[string]
+	requiredTags    *set.Set[string]
+	continueOnError *bool
 }
 
 func parseCommonFields(config *map[string]any) (cf *commonFields, err error) {
@@ -31,6 +32,11 @@ func parseCommonFields(config *map[string]any) (cf *commonFields, err error) {
 	}
 
 	cf.tags, cf.requiredTags, _, err = parse.TagsGet(config, "tags")
+	if err != nil {
+		return nil, err
+	}
+
+	cf.continueOnError, _, err = parse.Get[bool](config, "continueOnError")
 	if err != nil {
 		return nil, err
 	}

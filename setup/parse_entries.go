@@ -101,6 +101,10 @@ func parseEntryMap(config *map[string]any) (entry *Entry, err error) {
 
 	entry.RequiredTags = cf.requiredTags
 
+	if cf.continueOnError != nil {
+		entry.ContinueOnError = *cf.continueOnError
+	}
+
 	if values, err = parseValues(config, entry); err != nil {
 		return nil, err
 	}

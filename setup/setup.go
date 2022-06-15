@@ -236,7 +236,12 @@ func (s *setuper) exec(progress *Progress) (err error) {
 	if err = Exec(cmd, args, writer); err != nil {
 		progress.Status = StatusError
 		s.onProgress(s.progress)
-		return err
+
+		if progress.Value.GetContinueOnError() {
+			return nil
+		} else {
+			return err
+		}
 	}
 
 	s.doDelay()
