@@ -18,11 +18,13 @@ type Filterable interface {
 type Filterer interface {
 	Tags(tags *set.Set[string]) Filterer
 	EntryNames(entryNames *set.Set[string]) Filterer
-	FilterSystemScripts(scripts []*Script) (systemScript *Script, err error)
+	FilterSystemScripts(
+		scripts []*SystemScript,
+	) (systemScript *SystemScript, err error)
 	FilterSystemPackageManagers(
-		packageManagers []*PackageManager,
-	) (systemPackageManager *PackageManager, err error)
-	FilterValues(setup *Setup) (values []Value, err error)
+		packageManagers []*SystemPackageManager,
+	) (systemPackageManager *SystemPackageManager, err error)
+	FilterEntries(groups []*EntryGroup) (values []*Entry, err error)
 }
 
 type filterer struct {
@@ -54,8 +56,8 @@ func (f *filterer) EntryNames(entryNames *set.Set[string]) Filterer {
 }
 
 func (f *filterer) FilterSystemScripts(
-	scripts []*Script,
-) (systemScript *Script, err error) {
+	scripts []*SystemScript,
+) (systemScript *SystemScript, err error) {
 	foundScript, found, err := filter(f, scripts, nonRestrictive)
 	if err != nil {
 		return nil, err
@@ -67,8 +69,8 @@ func (f *filterer) FilterSystemScripts(
 }
 
 func (f *filterer) FilterSystemPackageManagers(
-	packageManagers []*PackageManager,
-) (systemPackageManager *PackageManager, err error) {
+	packageManagers []*SystemPackageManager,
+) (systemPackageManager *SystemPackageManager, err error) {
 	foundPackageManager, found, err := filter(
 		f,
 		packageManagers,
@@ -83,24 +85,35 @@ func (f *filterer) FilterSystemPackageManagers(
 	}
 }
 
-func (f *filterer) FilterValues(setup *Setup) (values []Value, err error) {
-	values = make([]Value, 0, len(setup.Entries))
+func (f *filterer) FilterEntries(
+	groups []*EntryGroup,
+) (entries []*Entry, err error) {
+	entries = make([]*Entry, 0, len(groups))
 
 	hasEntryNames := f.runtimeEntryNames.Len() > 0
-	for _, entry := range setup.Entries {
-		if hasEntryNames && !f.runtimeEntryNames.Contains(entry.Name) {
+	for _, entryGroup := range groups {
+		var (
+			foundEntry *Entry
+			found      bool
+		)
+
+		foundEntry, found, err = filter(f, entryGroup.Entries, restrictive)
+		if err != nil {
+			return nil, err
+		}
+
+		if !found {
 			continue
 		}
 
-		foundValue, found, err := filter(f, entry.Values, restrictive)
-		if err != nil {
-			return nil, err
-		} else if found {
-			values = append(values, foundValue)
+		if hasEntryNames && !f.runtimeEntryNames.Contains(foundEntry.Name) {
+			continue
 		}
+
+		entries = append(entries, foundEntry)
 	}
 
-	return values, nil
+	return entries, nil
 }
 
 func (f *filterer) initialize() (err error) {

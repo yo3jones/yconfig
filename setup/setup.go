@@ -26,12 +26,12 @@ type setuper struct {
 	entryNames            *set.Set[string]
 	delay                 int
 	onProgress            func(setupState *SetupState)
-	scripts               []*Script
-	packageManagers       []*PackageManager
-	setup                 *Setup
-	systemScript          *Script
-	systemPackageManager  *PackageManager
-	values                []Value
+	scripts               []*SystemScript
+	packageManagers       []*SystemPackageManager
+	groups                []*EntryGroup
+	systemScript          *SystemScript
+	systemPackageManager  *SystemPackageManager
+	entries               []*Entry
 	state                 *SetupState
 }
 
@@ -82,7 +82,7 @@ type SetupState struct {
 }
 
 type EntryState struct {
-	Value    Value
+	Entry    *Entry
 	Status   Status
 	Tries    int
 	Retrying bool
@@ -93,11 +93,11 @@ func New() Setuper {
 	return &setuper{}
 }
 
-func (s *setuper) Script() *Script {
+func (s *setuper) Script() *SystemScript {
 	return s.systemScript
 }
 
-func (s *setuper) PackageManager() *PackageManager {
+func (s *setuper) PackageManager() *SystemPackageManager {
 	return s.systemPackageManager
 }
 
@@ -151,7 +151,7 @@ func (s *setuper) Setup() (err error) {
 }
 
 func (s *setuper) prepare() (err error) {
-	if err = s.parseConfigs(); err != nil {
+	if err = s.unmarshalConfigs(); err != nil {
 		return err
 	}
 
@@ -174,17 +174,19 @@ func (s *setuper) prepare() (err error) {
 	return nil
 }
 
-func (s *setuper) parseConfigs() (err error) {
-	if s.scripts, err = ParseScripts(s.scriptsConfig); err != nil {
+func (s *setuper) unmarshalConfigs() (err error) {
+	if s.scripts, err = UnmarshalSystemScripts(s.scriptsConfig); err != nil {
 		return err
 	}
 
-	s.packageManagers, err = ParsePackageManagers(s.packageManagersConfig)
+	s.packageManagers, err = UnmarshalSystemPackageManagers(
+		s.packageManagersConfig,
+	)
 	if err != nil {
 		return err
 	}
 
-	if s.setup, err = Parse(s.config); err != nil {
+	if s.groups, err = UnmarshalEntryGroups(s.config); err != nil {
 		return err
 	}
 
@@ -208,7 +210,7 @@ func (s *setuper) filter() (err error) {
 		return err
 	}
 
-	if s.values, err = filterer.FilterValues(s.setup); err != nil {
+	if s.entries, err = filterer.FilterEntries(s.groups); err != nil {
 		return err
 	}
 
@@ -219,12 +221,12 @@ func (s *setuper) prepareState() {
 	setupState := &SetupState{
 		Status:       StatusWaiting,
 		ErroredCount: 0,
-		EntryStates:  make([]*EntryState, len(s.values)),
+		EntryStates:  make([]*EntryState, len(s.entries)),
 	}
 
-	for i, v := range s.values {
+	for i, e := range s.entries {
 		setupState.EntryStates[i] = &EntryState{
-			Value:  v,
+			Entry:  e,
 			Status: StatusWaiting,
 			Out:    []byte{},
 		}
@@ -239,7 +241,7 @@ func (s *setuper) prepareState() {
 
 func (s *setuper) execAll() (err error) {
 	for i := 0; !s.state.Status.IsCompleted(); i++ {
-		if i >= len(s.values) {
+		if i >= len(s.entries) {
 			i = 0
 		}
 
@@ -264,7 +266,7 @@ func (s *setuper) exec(state *EntryState) (err error) {
 		}
 
 		if !state.Status.IsCompleted() &&
-			state.Value.GetRetryBehavior() == RetryBehaviorInPlace {
+			state.Entry.RetryBehavior == RetryBehaviorInPlace {
 			continue
 		}
 
@@ -279,7 +281,7 @@ func (s *setuper) execOnce(state *EntryState) (err error) {
 
 	s.changeStatus(state, StatusRunning)
 
-	cmd, args := state.Value.BuildCommand(s)
+	cmd, args := state.Entry.commander.BuildCommand(s)
 	writer := NewWriter(&state.Out, func() {
 		s.notifyProgress()
 	})
@@ -288,13 +290,13 @@ func (s *setuper) execOnce(state *EntryState) (err error) {
 
 	state.Tries++
 
-	if err != nil && state.Value.GetRetryCount()+1 > state.Tries {
+	if err != nil && state.Entry.RetryCount+1 > state.Tries {
 		state.Retrying = true
 		s.changeStatus(state, StatusWaiting)
 		return nil
 	}
 
-	if err != nil && state.Value.GetContinueOnError() {
+	if err != nil && state.Entry.ContinueOnError {
 		s.changeStatus(state, StatusError)
 		return nil
 	}
@@ -341,7 +343,7 @@ func (s *setuper) recalculateState() {
 		case StatusError:
 			erroredCount++
 
-			if state.Value.GetContinueOnError() {
+			if state.Entry.ContinueOnError {
 				setupStatus = StatusRunning
 				completedCount++
 			} else {
@@ -353,7 +355,7 @@ func (s *setuper) recalculateState() {
 	s.state.ErroredCount = erroredCount
 	s.state.Status = setupStatus
 
-	allComplete := completedCount >= len(s.values)
+	allComplete := completedCount >= len(s.entries)
 
 	if allComplete && erroredCount > 0 {
 		s.state.Status = StatusError

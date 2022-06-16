@@ -55,6 +55,24 @@ func Get[T any](
 	return value, true, nil
 }
 
+func GetDefaultMap[T any](
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (value *T, exists bool, err error) {
+	if value, exists, err = Get[T](m, key); err != nil {
+		return nil, false, err
+	} else if exists {
+		return value, true, nil
+	}
+
+	if defaults == nil {
+		return nil, false, nil
+	}
+
+	return Get[T](defaults, key)
+}
+
 func StringSliceGet(
 	obj *map[string]any,
 	key string,
@@ -82,6 +100,24 @@ func StringSliceGet(
 	}
 
 	return strs, true, nil
+}
+
+func StringSliceGetDefaultMap(
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (strs []string, exists bool, err error) {
+	if strs, exists, err = StringSliceGet(m, key); err != nil {
+		return strs, false, err
+	} else if exists {
+		return strs, true, nil
+	}
+
+	if defaults == nil {
+		return strs, false, nil
+	}
+
+	return StringSliceGet(defaults, key)
 }
 
 func OsGet(
@@ -121,6 +157,24 @@ func OsPtrGet(
 	return &os, true, err
 }
 
+func OsGetDefaultMap(
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (os ostypes.Os, exists bool, err error) {
+	if os, exists, err = OsGet(m, key); err != nil {
+		return os, false, err
+	} else if exists {
+		return os, true, nil
+	}
+
+	if defaults == nil {
+		return os, false, nil
+	}
+
+	return OsGet(defaults, key)
+}
+
 func ArchGet(
 	obj *map[string]any,
 	key string,
@@ -158,6 +212,24 @@ func ArchPtrGet(
 	return &arch, true, err
 }
 
+func ArchGetDefaultMap(
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (arch archtypes.Arch, exists bool, err error) {
+	if arch, exists, err = ArchGet(m, key); err != nil {
+		return arch, false, err
+	} else if exists {
+		return arch, true, nil
+	}
+
+	if defaults == nil {
+		return arch, false, nil
+	}
+
+	return ArchGet(defaults, key)
+}
+
 func TagsGet(
 	obj *map[string]any,
 	key string,
@@ -184,4 +256,22 @@ func TagsGet(
 	}
 
 	return tags, requiredTags, true, nil
+}
+
+func TagsGetDefaultMap(
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (tags, requiredTags *set.Set[string], exists bool, err error) {
+	if tags, requiredTags, exists, err = TagsGet(m, key); err != nil {
+		return nil, nil, false, err
+	} else if exists {
+		return tags, requiredTags, true, nil
+	}
+
+	if defaults == nil {
+		return tags, requiredTags, false, nil
+	}
+
+	return TagsGet(defaults, key)
 }

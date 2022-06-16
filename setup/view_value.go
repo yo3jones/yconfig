@@ -110,7 +110,7 @@ func (m *ValueModel) renderStatusLine(sb *strings.Builder) {
 		statusBracketStyle.Render("["),
 		m.getStatusStyle().Render(m.state.Status.String()),
 		statusBracketStyle.Render("]"),
-		m.state.Value.GetName(),
+		m.state.Entry.Name,
 		m.renderRetry(),
 	)
 	fmt.Fprintf(
@@ -129,7 +129,7 @@ func (m *ValueModel) renderRetry() string {
 		fmt.Sprintf(
 			"( %d of %d )",
 			m.state.Tries,
-			m.state.Value.GetRetryCount()+1,
+			m.state.Entry.RetryCount+1,
 		),
 	)
 }
