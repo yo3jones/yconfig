@@ -258,6 +258,23 @@ func (s *setuper) exec(state *EntryState) (err error) {
 		return nil
 	}
 
+	for {
+		if err = s.execOnce(state); err != nil {
+			return err
+		}
+
+		if !state.Status.IsCompleted() &&
+			state.Value.GetRetryBehavior() == RetryBehaviorInPlace {
+			continue
+		}
+
+		break
+	}
+
+	return nil
+}
+
+func (s *setuper) execOnce(state *EntryState) (err error) {
 	s.doDelay()
 
 	s.changeStatus(state, StatusRunning)
