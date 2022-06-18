@@ -2,6 +2,7 @@ package setup
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/yo3jones/yconfig/set"
@@ -286,6 +287,8 @@ func (s *setuper) execOnce(state *EntryState) (err error) {
 		s.notifyProgress()
 	})
 
+	fmt.Fprintf(writer, "%s %s\n\n", cmd, strings.Join(args, " "))
+
 	err = Exec(cmd, args, writer)
 
 	state.Tries++
@@ -302,6 +305,7 @@ func (s *setuper) execOnce(state *EntryState) (err error) {
 	}
 
 	if err != nil {
+		s.changeStatus(state, StatusError)
 		return err
 	}
 
