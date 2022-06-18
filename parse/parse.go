@@ -55,6 +55,70 @@ func Get[T any](
 	return value, true, nil
 }
 
+func StringGet(
+	m *map[string]any,
+	key string,
+) (value string, exists bool, err error) {
+	var valuePtr *string
+	if valuePtr, exists, err = Get[string](m, key); err != nil {
+		return value, false, err
+	} else if !exists {
+		return value, false, nil
+	} else {
+		return *valuePtr, true, nil
+	}
+}
+
+func StringGetDefaultMap(
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (value string, exists bool, err error) {
+	if value, exists, err = StringGet(m, key); err != nil {
+		return value, false, err
+	} else if exists {
+		return value, true, nil
+	}
+
+	if defaults == nil {
+		return value, false, nil
+	}
+
+	return StringGet(defaults, key)
+}
+
+func IntGet(
+	m *map[string]any,
+	key string,
+) (value int, exists bool, err error) {
+	var valuePtr *int
+	if valuePtr, exists, err = Get[int](m, key); err != nil {
+		return value, false, err
+	} else if !exists {
+		return value, false, nil
+	} else {
+		return *valuePtr, true, nil
+	}
+}
+
+func IntGetDefaultMap(
+	m *map[string]any,
+	key string,
+	defaults *map[string]any,
+) (value int, exists bool, err error) {
+	if value, exists, err = IntGet(m, key); err != nil {
+		return value, false, err
+	} else if exists {
+		return value, true, nil
+	}
+
+	if defaults == nil {
+		return value, false, nil
+	}
+
+	return IntGet(defaults, key)
+}
+
 func GetDefaultMap[T any](
 	m *map[string]any,
 	key string,

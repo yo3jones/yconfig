@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	tags  []string
-	delay int
+	tags           []string
+	hideCompledOut bool
+	delay          int
 )
 
 var setupCmd = &cobra.Command{
@@ -27,6 +28,13 @@ var setupCmd = &cobra.Command{
 func init() {
 	setupCmd.Flags().
 		StringSliceVar(&tags, "tag", []string{}, "tags used for filtering")
+	setupCmd.Flags().
+		BoolVar(
+			&hideCompledOut,
+			"hide-completed-out",
+			true,
+			"whether to had output of completed entries",
+		)
 	setupCmd.Flags().
 		IntVar(&delay, "delay", 0, "add delay between setup entries")
 
@@ -51,6 +59,7 @@ func run(entryNames []string) {
 			Config(&config).
 			Tags(tags).
 			EntryNames(entryNames).
+			HideCompletedOut(hideCompledOut).
 			Delay(delay).
 			OnProgress(func(state *setup.SetupState) {
 				program.Send(state)
