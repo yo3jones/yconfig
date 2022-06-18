@@ -14,5 +14,5 @@ func getRelativePath(root, name string) string {
 }
 
 func makeDirAll(name string) error {
-	return os.MkdirAll(path.Dir(name), 0755)
+	return os.MkdirAll(path.Dir(name), 0o755)
 }
