@@ -28,7 +28,7 @@ func findFiles(glob string) []string {
 	return files
 }
 
-func glob(root string, include []string, exclude []string) []string {
+func glob(root string, include, exclude []string) []string {
 	filesSet := map[string]bool{}
 
 	for _, inc := range include {
