@@ -14,6 +14,7 @@ type Setuper interface {
 	Config(config *any) Setuper
 	Tags(tags []string) Setuper
 	EntryNames(entryNames []string) Setuper
+	HideCompletedOut(hideCompletedOut bool) Setuper
 	Delay(delay int) Setuper
 	OnProgress(onProgress func(setupState *SetupState)) Setuper
 	Setup() (err error)
@@ -25,6 +26,7 @@ type setuper struct {
 	config                *any
 	tags                  *set.Set[string]
 	entryNames            *set.Set[string]
+	hideCompletedOut      bool
 	delay                 int
 	onProgress            func(setupState *SetupState)
 	scripts               []*SystemScript
@@ -77,17 +79,20 @@ func (s Status) MarshalJSON() ([]byte, error) {
 }
 
 type SetupState struct {
-	Status       Status
-	ErroredCount int
-	EntryStates  []*EntryState
+	Status           Status
+	ErroredCount     int
+	CompletedCount   int
+	EntryStates      []*EntryState
+	HideCompletedOut bool
 }
 
 type EntryState struct {
-	Entry    *Entry
-	Status   Status
-	Tries    int
-	Retrying bool
-	Out      []byte
+	Entry            *Entry
+	Status           Status
+	Tries            int
+	Retrying         bool
+	Out              []byte
+	HideCompletedOut bool
 }
 
 func New() Setuper {
@@ -124,6 +129,11 @@ func (s *setuper) Tags(tags []string) Setuper {
 
 func (s *setuper) EntryNames(entryNames []string) Setuper {
 	s.entryNames = set.New(entryNames...)
+	return s
+}
+
+func (s *setuper) HideCompletedOut(hideCompletedOut bool) Setuper {
+	s.hideCompletedOut = hideCompletedOut
 	return s
 }
 
@@ -220,16 +230,19 @@ func (s *setuper) filter() (err error) {
 
 func (s *setuper) prepareState() {
 	setupState := &SetupState{
-		Status:       StatusWaiting,
-		ErroredCount: 0,
-		EntryStates:  make([]*EntryState, len(s.entries)),
+		Status:           StatusWaiting,
+		ErroredCount:     0,
+		CompletedCount:   0,
+		EntryStates:      make([]*EntryState, len(s.entries)),
+		HideCompletedOut: s.hideCompletedOut,
 	}
 
 	for i, e := range s.entries {
 		setupState.EntryStates[i] = &EntryState{
-			Entry:  e,
-			Status: StatusWaiting,
-			Out:    []byte{},
+			Entry:            e,
+			Status:           StatusWaiting,
+			Out:              []byte{},
+			HideCompletedOut: s.hideCompletedOut,
 		}
 	}
 
@@ -357,6 +370,7 @@ func (s *setuper) recalculateState() {
 	}
 
 	s.state.ErroredCount = erroredCount
+	s.state.CompletedCount = completedCount
 	s.state.Status = setupStatus
 
 	allComplete := completedCount >= len(s.entries)

@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/yo3jones/yconfig/archtypes"
@@ -147,7 +148,7 @@ func (s *SystemScript) BuildCommand(script string) (cmd string, args []string) {
 
 	args = make([]string, 0, len(s.Args)+1)
 	args = append(args, s.Args...)
-	args = append(args, script)
+	args = append(args, fmt.Sprintf("\\\n%s", script))
 
 	return cmd, args
 }

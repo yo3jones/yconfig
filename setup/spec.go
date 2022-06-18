@@ -29,6 +29,7 @@ const (
 	TypeScript
 	TypePackage
 	TypeCommand
+	TypeGit
 )
 
 func (t Type) String() string {
@@ -39,6 +40,8 @@ func (t Type) String() string {
 		return "package"
 	case TypeCommand:
 		return "command"
+	case TypeGit:
+		return "git"
 	}
 	return "unknown"
 }
@@ -51,6 +54,8 @@ func TypeFromString(str string) (Type, error) {
 		return TypePackage, nil
 	case "command":
 		return TypeCommand, nil
+	case "git":
+		return TypeGit, nil
 	}
 	return TypeUnknown, fmt.Errorf("no setup type for string %s", str)
 }
@@ -92,13 +97,13 @@ func RetryBehaviorFromString(str string) (RetryBehavior, error) {
 	}
 }
 
-func (t Type) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s"`, t)), nil
-}
-
 func (rs RetryBehavior) MarshalJSON() ([]byte, error) {
 	str := rs.String()
 	return json.Marshal(&str)
+}
+
+func (t Type) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, t)), nil
 }
 
 func (entry *Entry) Print() {

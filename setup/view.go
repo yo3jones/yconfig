@@ -97,16 +97,20 @@ func (m *Model) updateViewport() {
 		return
 	}
 
-	viewportHeight := m.windowHeight - m.statusLineHeights - 2
+	state := m.state
+	status := state.Status
+	complete := status.IsCompleted()
 
-	complete := m.state.Status.IsCompleted()
+	viewportHeight := m.windowHeight - m.statusLineHeights - 2
 
 	if complete {
 		viewportHeight -= 2
 	}
 
-	if complete && m.state.ErroredCount > 1 {
-		viewportHeight = viewportHeight / m.state.ErroredCount
+	if !state.HideCompletedOut && state.CompletedCount > 0 {
+		viewportHeight = viewportHeight / state.CompletedCount
+	} else if complete && state.ErroredCount > 1 {
+		viewportHeight = viewportHeight / state.ErroredCount
 	}
 
 	if viewportHeight < minViewportHeight {

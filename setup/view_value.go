@@ -68,11 +68,7 @@ func (m *ValueModel) View() string {
 
 	m.renderStatusLine(sb)
 
-	status := m.state.Status
-
-	if !m.setupComplete && status != StatusRunning {
-		return sb.String()
-	} else if m.setupComplete && status != StatusError {
+	if !m.shouldShowOut() {
 		return sb.String()
 	}
 
@@ -102,6 +98,26 @@ func (m *ValueModel) View() string {
 	fmt.Fprintf(sb, "%s", runtimeViewportStyle.Render(m.viewport.View()))
 
 	return sb.String()
+}
+
+func (m *ValueModel) shouldShowOut() bool {
+	state := m.state
+
+	if state.Status.IsCompleted() && !state.HideCompletedOut {
+		return true
+	}
+
+	status := state.Status
+
+	if !m.setupComplete && status != StatusRunning {
+		return false
+	}
+
+	if m.setupComplete && status != StatusError {
+		return false
+	}
+
+	return true
 }
 
 func (m *ValueModel) renderStatusLine(sb *strings.Builder) {
