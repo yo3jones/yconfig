@@ -1,5 +1,11 @@
 #!/bin/bash
 
+version=$1
+
+echo "setting version $version"
+VERSION="$version" go generate ./...
+
+echo "cleaning dist"
 rm -rf dist
 mkdir dist
 
@@ -17,8 +23,11 @@ function do_pi_build() {
   env GOOS=$os GOARCH=$arch GOARM=5 go build -o dist/yconfig-$os-$arch
 }
 
+echo "building"
 do_pi_build "linux" "arm"
 do_build "linux" "arm64"
 do_build "linux" "amd64"
 do_build "darwin" "arm64"
 do_build "darwin" "amd64"
+
+echo "complete"
