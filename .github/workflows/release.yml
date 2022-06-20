@@ -71,4 +71,4 @@ jobs:
     - name: Release
       env:
         VERSION: ${{ inputs.version }}
-      run: gh release creaate $VERSION dist/yconfig-* --title $VERSION
+      run: gh release create $VERSION dist/yconfig-* --title $VERSION
