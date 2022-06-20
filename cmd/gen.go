@@ -86,6 +86,7 @@ func init() {
 
 	genCmd.Flags().
 		String(nameTemplateRoot, ".", "root path for the template files")
+
 	err = viper.BindPFlag(
 		pathTempalteRoot,
 		genCmd.Flags().Lookup(nameTemplateRoot),
@@ -99,6 +100,7 @@ func init() {
 		".",
 		"root path for writing the output of the templates",
 	)
+
 	err = viper.BindPFlag(
 		pathDestRoot,
 		genCmd.Flags().Lookup(nameDestRoot),
@@ -112,6 +114,7 @@ func init() {
 		[]string{},
 		"globs of config file templates to include",
 	)
+
 	err = viper.BindPFlag(pathInclude, genCmd.Flags().Lookup(nameInclude))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -122,6 +125,7 @@ func init() {
 		[]string{},
 		"globs of config file templates to exclude",
 	)
+
 	err = viper.BindPFlag(pathExclude, genCmd.Flags().Lookup(nameExclude))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -132,6 +136,7 @@ func init() {
 		true,
 		"whether to link the generated config files to the users home dir",
 	)
+
 	err = viper.BindPFlag(pathLink, genCmd.Flags().Lookup(nameLink))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -142,6 +147,7 @@ func init() {
 		[]string{},
 		"tags that can be used in the config templates",
 	)
+
 	err = viper.BindPFlag(pathTags, genCmd.Flags().Lookup(nameTags))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -149,6 +155,7 @@ func init() {
 
 	genCmd.Flags().
 		Int(nameDelay, 0, "add a delay in mils to see cool animations")
+
 	err = viper.BindPFlag(pathDelay, genCmd.Flags().Lookup(nameDelay))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -169,10 +176,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case ProgressMsg:
 		m.progress = msg.progress
+
 		return m, nil
 	case doneMsg:
 		return m, tea.Quit
 	}
+
 	return m, nil
 }
 
@@ -180,6 +189,7 @@ func maxWidth(x, y int) int {
 	if x > y {
 		return x
 	}
+
 	return y
 }
 
@@ -193,45 +203,52 @@ func (m model) View() string {
 		maxPathWidth = maxWidth(maxPathWidth, lipgloss.Width(p.Path))
 	}
 
-	sb := strings.Builder{}
+	builder := strings.Builder{}
 	bracketStyle := lipgloss.NewStyle().
 		Bold(true)
 
-	for _, p := range m.progress.TemplatesProgress {
+	for _, progress := range m.progress.TemplatesProgress {
 		var symbol string
+
 		symbolStyle := lipgloss.NewStyle().Bold(true)
-		switch p.Status {
+
+		switch progress.Status {
 		case generate.Waiting:
 			symbolStyle.Foreground(lipgloss.Color("13"))
+
 			symbol = ""
 		case generate.Generating, generate.Linking:
 			symbolStyle.Foreground(lipgloss.Color("12"))
+
 			symbol = "◯"
 		case generate.Complete:
 			symbolStyle.Foreground(lipgloss.Color("10"))
+
 			symbol = "✔"
 		case generate.Error:
 			symbolStyle.Foreground(lipgloss.Color("9"))
+
 			symbol = "⚠"
 		default:
 			symbol = ""
 		}
-		sb.WriteString(
+
+		builder.WriteString(
 			fmt.Sprintf(
 				"   %s %s %s %s   %s\n",
 				bracketStyle.Render("["),
 				symbolStyle.Copy().
 					Width(10).
 					Align(lipgloss.Right).
-					Render(p.Status.String()),
+					Render(progress.Status.String()),
 				bracketStyle.Render("]"),
 				lipgloss.NewStyle().
 					Width(maxPathWidth).
-					Render(p.Path),
+					Render(progress.Path),
 				symbolStyle.Render(symbol),
 			),
 		)
 	}
 
-	return sb.String()
+	return builder.String()
 }

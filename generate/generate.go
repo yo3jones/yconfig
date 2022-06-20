@@ -51,6 +51,7 @@ func (ps ProgressStatus) String() string {
 	case Error:
 		return "Error"
 	}
+
 	return "Uknown"
 }
 
@@ -69,26 +70,31 @@ type generator struct {
 
 func (g *generator) TemplateRoot(templateRoot string) Generator {
 	g.templateRoot = templateRoot
+
 	return g
 }
 
 func (g *generator) DesinationRoot(destinationRoot string) Generator {
 	g.destinationRoot = destinationRoot
+
 	return g
 }
 
 func (g *generator) Include(include []string) Generator {
 	g.include = include
+
 	return g
 }
 
 func (g *generator) Exclude(exclude []string) Generator {
 	g.exclude = exclude
+
 	return g
 }
 
 func (g *generator) Link(link bool) Generator {
 	g.link = link
+
 	return g
 }
 
@@ -97,17 +103,21 @@ func (g *generator) Tags(tags []string) Generator {
 	for _, tag := range tags {
 		tagsSet[strings.ToLower(tag)] = true
 	}
+
 	g.tags = tagsSet
+
 	return g
 }
 
 func (g *generator) Delay(delay int) Generator {
 	g.delay = delay
+
 	return g
 }
 
 func (g *generator) OnProgress(onProgress func(progress *Progress)) Generator {
 	g.onProgress = onProgress
+
 	return g
 }
 

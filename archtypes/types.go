@@ -1,6 +1,7 @@
 package archtypes
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -35,6 +36,11 @@ const (
 	Wasm
 )
 
+const anyStr = "any"
+
+var ArchNotFoundError = errors.New("unknown arch type for string")
+
+// nolint:funlen,cyclop
 func (arch Arch) String() string {
 	switch arch {
 	case Arch386:
@@ -85,13 +91,17 @@ func (arch Arch) String() string {
 		return "sparc64"
 	case Wasm:
 		return "wasm"
+	case Any:
+		return anyStr
 	}
-	return "any"
+
+	return anyStr
 }
 
+// nolint:funlen,cyclop
 func ArchFromString(str string) (Arch, error) {
 	switch strings.ToLower(str) {
-	case "any":
+	case anyStr:
 		return Any, nil
 	case "386":
 		return Arch386, nil
@@ -142,7 +152,8 @@ func ArchFromString(str string) (Arch, error) {
 	case "wasm":
 		return Wasm, nil
 	}
-	return Any, fmt.Errorf("unknown arch type for string %s", str)
+
+	return Any, fmt.Errorf("%w : %s", ArchNotFoundError, str)
 }
 
 func (arch Arch) MarshalJSON() ([]byte, error) {
