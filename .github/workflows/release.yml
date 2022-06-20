@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: version to release
+        required: true
+        type: string
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3.2.0
+
+    - name: Test Build
+      run: go build -v ./...
+
+    - name: Get Versioner
+      run: go get github.com/yo3jones/versioner
+
+    - name: Install Versioner
+      run: go install github.com/yo3jones/versioner
+
+    - name: Set Version
+      env:
+        VERSION: ${{ inputs.version }}
+      run: go generate ./...
+
+    - name: Build Linux Arm
+      run: go build -o dist/yconfig-linux-arm
+      env:
+        GOOS: linux
+        GOARCH: arm
+        GOARM: 5
+
+    - name: Build Linux Amd64
+      run: go build -o dist/yconfig-linux-amd64
+      env:
+        GOOS: linux
+        GOARCH: amd64
+
+    - name: Build Linux Arm64
+      run: go build -o dist/yconfig-linux-arm64
+      env:
+        GOOS: linux
+        GOARCH: arm64
+
+    - name: Build Darwin Amd64
+      run: go build -o dist/yconfig-darwin-amd64
+      env:
+        GOOS: darwin
+        GOARCH: amd64
+
+    - name: Build Darwin Arm64
+      run: go build -o dist/yconfig-darwin-arm64
+      env:
+        GOOS: darwin
+        GOARCH: arm64
+
+    - name: Release
+      env:
+        VERSION: ${{ inputs.version }}
+      run: gh release creaate $VERSION dist/yconfig-* --title $VERSION
