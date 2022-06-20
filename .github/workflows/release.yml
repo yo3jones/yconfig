@@ -71,4 +71,5 @@ jobs:
     - name: Release
       env:
         VERSION: ${{ inputs.version }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: gh release create $VERSION dist/yconfig-* --title $VERSION
